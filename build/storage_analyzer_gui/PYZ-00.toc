@@ -1,5 +1,5 @@
 ('D:\\72 projects of python\\Prompt Engineering '
- 'Essentials\\build\\StorageAnalyzer\\PYZ-00.pyz',
+ 'Essentials\\build\\storage_analyzer_gui\\PYZ-00.pyz',
  [('IPython',
    'C:\\Users\\Souparna\\AppData\\Roaming\\Python\\Python313\\site-packages\\IPython\\__init__.py',
    'PYMODULE'),

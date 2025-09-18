@@ -3,24 +3,43 @@ from tkinter import filedialog, messagebox, scrolledtext
 import os
 import sys
 
-# --- Core Logic (unchanged, still uses the lists passed) ---
-def combine_files_to_single_file_gui(root_dir, output_full_path, excluded_dirs_list, excluded_files_list, status_callback):
+# --- Core Logic (now with optional include functionality) ---
+def combine_files_to_single_file_gui(root_dir, output_full_path, 
+                                     excluded_dirs_list, excluded_files_list,
+                                     included_dirs_list, included_files_list, # New parameters
+                                     status_callback):
     """
     Combines the content of all files in a directory into a single file,
-    excluding specified directories and files, and provides status updates via a callback.
+    optionally including only specified directories/files, or excluding specified
+    directories and files, and provides status updates via a callback.
 
     Args:
         root_dir (str): The root directory of the project.
         output_full_path (str): The full path including filename for the output file.
-        excluded_dirs_list (list): A list of directory names to exclude.
-        excluded_files_list (list): A list of filenames to exclude.
+        excluded_dirs_list (list): A list of directory names to exclude (ignored if include lists are used).
+        excluded_files_list (list): A list of filenames to exclude (ignored if include lists are used).
+        included_dirs_list (list): A list of directory names to explicitly include.
+        included_files_list (list): A list of filenames to explicitly include.
         status_callback (callable): A function to call with status messages.
     """
     combined_content = []
 
     status_callback(f"Starting to combine files from: {root_dir}")
-    status_callback(f"Excluding directories: {', '.join(excluded_dirs_list)}")
-    status_callback(f"Excluding files: {', '.join(excluded_files_list)}")
+
+    # Determine if "include mode" is active
+    use_include_mode = bool(included_dirs_list or included_files_list)
+
+    if use_include_mode:
+        status_callback(f"Running in INCLUDE MODE.")
+        if included_dirs_list:
+            status_callback(f"Including directories: {', '.join(included_dirs_list)}")
+        if included_files_list:
+            status_callback(f"Including files: {', '.join(included_files_list)}")
+        status_callback("Exclusion lists will be ignored in INCLUDE MODE.")
+    else:
+        status_callback(f"Running in EXCLUDE MODE.")
+        status_callback(f"Excluding directories: {', '.join(excluded_dirs_list)}")
+        status_callback(f"Excluding files: {', '.join(excluded_files_list)}")
 
     # Basic validation
     if not os.path.isdir(root_dir):
@@ -37,26 +56,80 @@ def combine_files_to_single_file_gui(root_dir, output_full_path, excluded_dirs_l
             status_callback(f"Error creating output directory {output_dir}: {e}")
             return False
 
+    # Convert lists to sets for faster lookups
+    excluded_dirs_set = set(excluded_dirs_list)
+    excluded_files_set = set(excluded_files_list)
+    included_dirs_set = set(included_dirs_list)
+    included_files_set = set(included_files_list)
+
     try:
         for dirpath, dirnames, filenames in os.walk(root_dir):
-            # Modify dirnames in-place to skip excluded directories
-            # Filter based on basename, as excluded_dirs_list contains only names
-            dirnames[:] = [d for d in dirnames if d not in excluded_dirs_list]
+            relative_dirpath = os.path.relpath(dirpath, root_dir)
 
+            # --- Apply Include Mode Filtering (Directory Traversal) ---
+            if use_include_mode:
+                # Determine if the current directory `dirpath` (and its files/subdirs) should be considered *at all*
+                # based on the `included_dirs_set`.
+                should_process_this_dir_based_on_included_dirs = True 
+                
+                if included_dirs_set: # User has specified specific directories to include
+                    if dirpath == root_dir:
+                        # The root directory is always the starting point, so it's relevant to find included items.
+                        should_process_this_dir_based_on_included_dirs = True
+                    else:
+                        # Check if this directory, or any of its ancestors (relative to root), matches an included directory basename.
+                        relative_path_segments = relative_dirpath.split(os.sep)
+                        if not any(seg in included_dirs_set for seg in relative_path_segments):
+                            should_process_this_dir_based_on_included_dirs = False
+
+                if not should_process_this_dir_based_on_included_dirs:
+                    # If this directory is not relevant based on `included_dirs_set`, prune its subdirectories
+                    # and skip processing any files in it.
+                    dirnames[:] = [] # Do not traverse into any subdirectories
+                    continue         # Skip files in this directory
+            
+            # --- Apply Exclude Mode Filtering (Directory Traversal) ---
+            else: # Not in include mode, apply exclude logic for directories
+                dirnames[:] = [d for d in dirnames if d not in excluded_dirs_set]
+
+            # --- Filter Files for Processing ---
+            files_to_process = []
             for filename in filenames:
-                # Filter based on basename, as excluded_files_list contains only names
-                if filename in excluded_files_list:
-                    status_callback(f"Skipping excluded file: {os.path.join(dirpath, filename)}")
-                    continue
-
-                file_path = os.path.join(dirpath, filename)
-                # Make path relative to root_dir for the header
-                relative_file_path = os.path.relpath(file_path, root_dir)
-
-                # Skip symbolic links to avoid infinite loops or errors
-                if os.path.islink(file_path):
+                relative_file_path = os.path.join(relative_dirpath, filename)
+                
+                # Skip symbolic links immediately
+                if os.path.islink(os.path.join(dirpath, filename)):
                     status_callback(f"Skipping symbolic link: {relative_file_path}")
                     continue
+
+                if use_include_mode:
+                    # If specific files are included, only take those
+                    if included_files_set:
+                        if filename in included_files_set:
+                            files_to_process.append(filename)
+                        else:
+                            status_callback(f"Skipping non-included file: {relative_file_path}")
+                    # If no specific files but included_dirs are defined, take all files in an included/relevant dir
+                    elif included_dirs_set: # This condition implicitly means should_process_this_dir_based_on_included_dirs was True
+                        files_to_process.append(filename)
+                    # If only included_files_set is empty, and included_dirs_set is also empty, implies nothing to include
+                    # This case would mean use_include_mode would be False. So this part is effectively
+                    # `if included_files_set:`
+                    # if nothing is specified for file inclusion but `use_include_mode` is true because of `included_dirs_set`
+                    # then all files in *relevant* directories are fair game.
+                    # The `should_process_this_dir_based_on_included_dirs` check already handled dir relevance.
+                    else: # This path should not be reached if use_include_mode is true, as it means both included sets are empty.
+                        pass # Should not happen based on `use_include_mode` definition.
+                else: # Not in include mode, apply exclude logic for files
+                    if filename in excluded_files_set:
+                        status_callback(f"Skipping excluded file: {relative_file_path}")
+                    else:
+                        files_to_process.append(filename)
+
+            # --- Process the filtered files ---
+            for filename in files_to_process:
+                file_path = os.path.join(dirpath, filename)
+                relative_file_path = os.path.relpath(file_path, root_dir)
 
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
@@ -85,19 +158,24 @@ class FileCombinerApp:
         self.master = master
         master.title("Project File Combiner")
         
-        # Set a default size for the window, allowing resizing
-        master.geometry("900x650") # Slightly wider to accommodate new buttons
+        master.geometry("1000x700") # Slightly wider and taller to accommodate new buttons
         master.resizable(True, True)
 
         # Variables
         self.root_dir_var = tk.StringVar(value=os.getcwd()) # Default to current dir
         self.output_full_path_var = tk.StringVar(value=os.path.join(os.getcwd(), "combined_project_files.txt"))
+        
+        # Excluded items
         self.excluded_dirs_var = tk.StringVar(
             value="node_modules, .git, .vscode, .idea, dist, build, venv, __pycache__, .DS_Store"
         )
         self.excluded_files_var = tk.StringVar(
             value="package-lock.json, yarn.lock, bun.lockb, .env, .DS_Store, Thumbs.db, pyproject.toml"
         )
+
+        # Included items (NEW)
+        self.included_dirs_var = tk.StringVar(value="")
+        self.included_files_var = tk.StringVar(value="")
 
         self.create_widgets()
 
@@ -107,34 +185,72 @@ class FileCombinerApp:
         input_frame.pack(fill=tk.X)
 
         # Configure grid column weights so the Entry fields expand
-        input_frame.grid_columnconfigure(1, weight=1)
+        # input_frame.grid_columnconfigure(1, weight=1) # Already had this for excluding files
+        input_frame.grid_columnconfigure(1, weight=1) # Ensure the entry columns get space
+        input_frame.grid_columnconfigure(3, weight=0) # Make sure the helpful label doesn't steal too much space
+
+
+        row_num = 0
 
         # Project Root Directory
-        tk.Label(input_frame, text="1. Project Root Directory:").grid(row=0, column=0, sticky=tk.W, pady=2)
-        tk.Entry(input_frame, textvariable=self.root_dir_var, width=70).grid(row=0, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Browse...", command=self.browse_root_dir).grid(row=0, column=2, pady=2, padx=5)
+        tk.Label(input_frame, text="1. Project Root Directory:").grid(row=row_num, column=0, sticky=tk.W, pady=2)
+        tk.Entry(input_frame, textvariable=self.root_dir_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
+        tk.Button(input_frame, text="Browse...", command=self.browse_root_dir).grid(row=row_num, column=2, pady=2, padx=5)
+        row_num += 1
 
         # Output File Location
-        tk.Label(input_frame, text="2. Output File Path:").grid(row=1, column=0, sticky=tk.W, pady=2)
-        tk.Entry(input_frame, textvariable=self.output_full_path_var, width=70).grid(row=1, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Browse...", command=self.browse_output_file).grid(row=1, column=2, pady=2, padx=5)
+        tk.Label(input_frame, text="2. Output File Path:").grid(row=row_num, column=0, sticky=tk.W, pady=2)
+        tk.Entry(input_frame, textvariable=self.output_full_path_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
+        tk.Button(input_frame, text="Browse...", command=self.browse_output_file).grid(row=row_num, column=2, pady=2, padx=5)
+        row_num += 1
+
+        # Separator for clarity
+        tk.Frame(input_frame, height=2, bd=1, relief=tk.SUNKEN).grid(row=row_num, columnspan=4, sticky=tk.EW, pady=10)
+        row_num += 1
+        
+        tk.Label(input_frame, text="3. Define what to INCLUDE (optional - if used, exclusions below are ignored):",
+                 font=('Arial', 10, 'bold')).grid(row=row_num, column=0, columnspan=4, sticky=tk.W, pady=(5,0))
+        row_num += 1
+
+        # Included Directories (NEW)
+        tk.Label(input_frame, text="Include Directories (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
+        tk.Entry(input_frame, textvariable=self.included_dirs_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
+        tk.Button(input_frame, text="Add Dir...", command=self.browse_included_dirs).grid(row=row_num, column=2, pady=2, padx=5)
+        tk.Label(input_frame, text="e.g., src, docs", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
+        row_num += 1
+
+        # Included Files (NEW)
+        tk.Label(input_frame, text="Include Files (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
+        tk.Entry(input_frame, textvariable=self.included_files_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
+        tk.Button(input_frame, text="Add File...", command=self.browse_included_files).grid(row=row_num, column=2, pady=2, padx=5)
+        tk.Label(input_frame, text="e.g., main.py, README.md", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
+        row_num += 1
+
+        # Separator for clarity
+        tk.Frame(input_frame, height=2, bd=1, relief=tk.SUNKEN).grid(row=row_num, columnspan=4, sticky=tk.EW, pady=10)
+        row_num += 1
+
+        tk.Label(input_frame, text="4. Define what to EXCLUDE (only if nothing is included above):",
+                 font=('Arial', 10, 'bold')).grid(row=row_num, column=0, columnspan=4, sticky=tk.W, pady=(5,0))
+        row_num += 1
+
 
         # Excluded Directories
-        tk.Label(input_frame, text="3. Exclude Directories (comma-separated):").grid(row=2, column=0, sticky=tk.W, pady=2)
+        tk.Label(input_frame, text="Exclude Directories (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
         entry_excluded_dirs = tk.Entry(input_frame, textvariable=self.excluded_dirs_var, width=70)
-        entry_excluded_dirs.grid(row=2, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Add Dir...", command=self.browse_excluded_dirs).grid(row=2, column=2, pady=2, padx=5)
-        # Added a helpful label
-        tk.Label(input_frame, text="e.g., node_modules, .git", fg="gray").grid(row=2, column=3, sticky=tk.W, padx=5)
+        entry_excluded_dirs.grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
+        tk.Button(input_frame, text="Add Dir...", command=self.browse_excluded_dirs).grid(row=row_num, column=2, pady=2, padx=5)
+        tk.Label(input_frame, text="e.g., node_modules, .git", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
+        row_num += 1
 
 
         # Excluded Files
-        tk.Label(input_frame, text="4. Exclude Files (comma-separated):").grid(row=3, column=0, sticky=tk.W, pady=2)
+        tk.Label(input_frame, text="Exclude Files (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
         entry_excluded_files = tk.Entry(input_frame, textvariable=self.excluded_files_var, width=70)
-        entry_excluded_files.grid(row=3, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Add File...", command=self.browse_excluded_files).grid(row=3, column=2, pady=2, padx=5)
-        # Added a helpful label
-        tk.Label(input_frame, text="e.g., package-lock.json, .env", fg="gray").grid(row=3, column=3, sticky=tk.W, padx=5)
+        entry_excluded_files.grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
+        tk.Button(input_frame, text="Add File...", command=self.browse_excluded_files).grid(row=row_num, column=2, pady=2, padx=5)
+        tk.Label(input_frame, text="e.g., package-lock.json, .env", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
+        row_num += 1
 
 
         # Combine Button
@@ -176,12 +292,10 @@ class FileCombinerApp:
 
     def browse_output_file(self):
         """Opens a file save dialog for specifying the output file."""
-        # Get default filename from current output path variable
         current_output_path = self.output_full_path_var.get()
         default_filename = os.path.basename(current_output_path)
         default_initialdir = os.path.dirname(current_output_path)
         
-        # Ensure default_initialdir is a valid directory, otherwise use CWD
         if not os.path.isdir(default_initialdir):
             default_initialdir = os.getcwd()
 
@@ -201,12 +315,12 @@ class FileCombinerApp:
         initial_dir = root_dir if os.path.isdir(root_dir) else os.getcwd()
         selected_path = filedialog.askdirectory(
             initialdir=initial_dir,
-            title="Select Directory to Exclude"
+            title="Select Directory to Exclude (by basename)"
         )
         if selected_path:
             dir_name = os.path.basename(selected_path)
             self._add_to_comma_separated_list(self.excluded_dirs_var, [dir_name])
-            self.update_status_message(f"Added directory '{dir_name}' to exclusion list.")
+            self.update_status_message(f"Added directory '{dir_name}' to EXCLUSION list.")
 
     def browse_excluded_files(self):
         """Opens a file dialog to select files to exclude."""
@@ -214,12 +328,38 @@ class FileCombinerApp:
         initial_dir = root_dir if os.path.isdir(root_dir) else os.getcwd()
         selected_paths = filedialog.askopenfilenames(
             initialdir=initial_dir,
-            title="Select Files to Exclude"
+            title="Select Files to Exclude (by basename)"
         )
         if selected_paths:
             file_names = [os.path.basename(p) for p in selected_paths]
             self._add_to_comma_separated_list(self.excluded_files_var, file_names)
-            self.update_status_message(f"Added files {', '.join(file_names)} to exclusion list.")
+            self.update_status_message(f"Added files {', '.join(file_names)} to EXCLUSION list.")
+
+    def browse_included_dirs(self): # NEW
+        """Opens a directory dialog to select directories to include."""
+        root_dir = self.root_dir_var.get()
+        initial_dir = root_dir if os.path.isdir(root_dir) else os.getcwd()
+        selected_path = filedialog.askdirectory(
+            initialdir=initial_dir,
+            title="Select Directory to Include (by basename)"
+        )
+        if selected_path:
+            dir_name = os.path.basename(selected_path)
+            self._add_to_comma_separated_list(self.included_dirs_var, [dir_name])
+            self.update_status_message(f"Added directory '{dir_name}' to INCLUSION list.")
+
+    def browse_included_files(self): # NEW
+        """Opens a file dialog to select files to include."""
+        root_dir = self.root_dir_var.get()
+        initial_dir = root_dir if os.path.isdir(root_dir) else os.getcwd()
+        selected_paths = filedialog.askopenfilenames(
+            initialdir=initial_dir,
+            title="Select Files to Include (by basename)"
+        )
+        if selected_paths:
+            file_names = [os.path.basename(p) for p in selected_paths]
+            self._add_to_comma_separated_list(self.included_files_var, file_names)
+            self.update_status_message(f"Added files {', '.join(file_names)} to INCLUSION list.")
 
     def start_combination(self):
         """Triggers the file combination process."""
@@ -231,12 +371,19 @@ class FileCombinerApp:
 
         root_dir = self.root_dir_var.get()
         output_full_path = self.output_full_path_var.get()
+        
         excluded_dirs_str = self.excluded_dirs_var.get()
         excluded_files_str = self.excluded_files_var.get()
+        
+        included_dirs_str = self.included_dirs_var.get() # NEW
+        included_files_str = self.included_files_var.get() # NEW
 
         # Convert comma-separated strings to lists, stripping whitespace
         excluded_dirs = [d.strip() for d in excluded_dirs_str.split(',') if d.strip()]
         excluded_files = [f.strip() for f in excluded_files_str.split(',') if f.strip()]
+        
+        included_dirs = [d.strip() for d in included_dirs_str.split(',') if d.strip()] # NEW
+        included_files = [f.strip() for f in included_files_str.split(',') if f.strip()] # NEW
 
         if not root_dir:
             messagebox.showerror("Error", "Please select a project root directory.")
@@ -258,6 +405,8 @@ class FileCombinerApp:
                 output_full_path, 
                 excluded_dirs, 
                 excluded_files, 
+                included_dirs,  # Pass new parameters
+                included_files, # Pass new parameters
                 self.update_status_message
             )
 
