@@ -4,8 +4,6 @@ import re
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-SUMMARY_FILE = "code_summary.txt"
-
 # -------------------------
 # Summarizers
 # -------------------------
@@ -62,8 +60,8 @@ def summarize_file(filepath):
     else:
         return summarize_text(filepath, code)
 
-def generate_summary(project_dir):
-    with open(SUMMARY_FILE, "w", encoding="utf-8") as out:
+def generate_summary(project_dir, output_path):
+    with open(output_path, "w", encoding="utf-8") as out:
         for root, dirs, files in os.walk(project_dir):
             # skip heavy/unnecessary dirs
             dirs[:] = [d for d in dirs if d not in ("node_modules", "__pycache__", ".git", "dist", "build")]
@@ -77,7 +75,7 @@ def generate_summary(project_dir):
                 except Exception as e:
                     summary = f"⚠️ Error: {e}"
                 out.write(f"\n📂 {filepath}\n{summary}\n{'-'*60}\n")
-    return SUMMARY_FILE
+    return output_path
 
 # -------------------------
 # GUI app
@@ -86,14 +84,23 @@ def main():
     root = tk.Tk()
     root.withdraw()  # hide main window
 
+    # Ask for input folder
     folder = filedialog.askdirectory(title="Select your project folder to summarize")
     if not folder:
-        messagebox.showinfo("Cancelled", "No folder selected.")
+        messagebox.showinfo("Cancelled", "No project folder selected.")
         return
 
+    # Ask for output folder
+    out_folder = filedialog.askdirectory(title="Select output folder for summary file")
+    if not out_folder:
+        messagebox.showinfo("Cancelled", "No output folder selected.")
+        return
+
+    output_file = os.path.join(out_folder, "code_summary.txt")
+
     try:
-        output_file = generate_summary(folder)
-        messagebox.showinfo("Done ✅", f"Summary saved to {output_file}")
+        generate_summary(folder, output_file)
+        messagebox.showinfo("Done ✅", f"Summary saved to:\n{output_file}")
     except Exception as e:
         messagebox.showerror("Error ❌", str(e))
 
