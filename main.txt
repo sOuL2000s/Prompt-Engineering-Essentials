@@ -4,3 +4,11 @@ CONTEXT :
 
 PROMPT : 
 
+
+--------------------------
+
+github time save : 
+
+git add .
+git commit -m "updated"
+git push
