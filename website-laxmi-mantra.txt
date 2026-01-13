@@ -1,0 +1,176 @@
+**Role:**
+You are a **senior full-stack developer, UI/UX designer, and performance engineer** with deep expertise in modern web standards, accessibility, and responsive design.
+
+**Task:**
+Analyze the provided website **codebase (HTML, CSS, JavaScript, backend if any)** and **completely upgrade it** to achieve the following goals:
+
+---
+
+### 🎨 1. UI / VISUAL DESIGN IMPROVEMENTS
+
+* Redesign the interface to look **modern, clean, and professional**
+* Use **consistent spacing, typography, colors, and visual hierarchy**
+* Improve:
+
+  * Button styles (hover, active, focus states)
+  * Forms, inputs, modals, dropdowns
+  * Cards, sections, and layouts
+* Ensure the design looks **premium and polished**, not cluttered
+* Avoid unnecessary animations; use **subtle, smooth transitions**
+
+---
+
+### 🧠 2. UX (USER EXPERIENCE) IMPROVEMENTS
+
+* Improve overall usability and flow
+* Make all actions **intuitive and self-explanatory**
+* Reduce user friction and confusion
+* Ensure:
+
+  * Clear call-to-actions (CTAs)
+  * Logical navigation structure
+  * Proper loading states and feedback
+  * Clear error messages and success messages
+
+---
+
+### 📱 3. RESPONSIVENESS (ALL DEVICES)
+
+* Make the website **fully responsive** across:
+
+  * Mobile (small & large phones)
+  * Tablets
+  * Laptops
+  * Large desktops
+* Use:
+
+  * Mobile-first design
+  * Flexible grids (Flexbox / CSS Grid)
+  * Responsive typography
+* Ensure:
+
+  * No horizontal scrolling
+  * No broken layouts
+  * Touch-friendly buttons and inputs
+
+---
+
+### ⚡ 4. PERFORMANCE OPTIMIZATION
+
+* Optimize:
+
+  * CSS and JavaScript usage
+  * DOM manipulation
+  * Event listeners
+* Remove:
+
+  * Unused CSS
+  * Redundant JavaScript
+  * Duplicate logic
+* Improve:
+
+  * Page load time
+  * Rendering performance
+  * Animation smoothness
+* Follow **best practices for modern browsers**
+
+---
+
+### 🐞 5. ZERO BUG POLICY (VERY IMPORTANT)
+
+* Identify and **fix ALL bugs**, including:
+
+  * UI glitches
+  * Layout breaking issues
+  * JavaScript runtime errors
+  * Console errors & warnings
+  * Race conditions or timing issues
+* Ensure:
+
+  * No broken buttons or links
+  * No inconsistent states
+  * No unexpected behavior
+* Final output must run with:
+
+  * **ZERO console errors**
+  * **ZERO console warnings (unless unavoidable and justified)**
+
+---
+
+### ♿ 6. ACCESSIBILITY (A11Y)
+
+* Follow basic accessibility standards:
+
+  * Proper contrast ratios
+  * Keyboard navigation
+  * ARIA labels where needed
+  * Semantic HTML
+* Ensure the site is usable for **all users**
+
+---
+
+### 🧩 7. CODE QUALITY & STRUCTURE
+
+* Refactor code to be:
+
+  * Clean
+  * Readable
+  * Modular
+  * Well-organized
+* Use:
+
+  * Meaningful variable and function names
+  * Proper comments only where necessary
+* Do NOT:
+
+  * Over-engineer
+  * Add unnecessary libraries
+* Keep the solution **simple, scalable, and maintainable**
+
+---
+
+### 🧪 8. TESTING & VALIDATION
+
+* Test:
+
+  * All UI components
+  * All interactive features
+  * Responsiveness at multiple screen sizes
+* Verify:
+
+  * No layout breaks
+  * No JavaScript failures
+  * No performance regressions
+
+---
+
+### 📦 OUTPUT REQUIREMENTS
+
+* Provide:
+
+  * Updated and corrected code
+  * Clear explanation of major changes
+* Do NOT leave:
+
+  * TODOs
+  * Partial implementations
+  * Known issues
+* The final result must be:
+
+  * **Production-ready**
+  * **Bug-free**
+  * **Visually polished**
+  * **Highly responsive**
+
+---
+
+### 🎯 FINAL GOAL
+
+Deliver a website that:
+
+* Looks **modern and professional**
+* Feels **smooth and intuitive**
+* Works **perfectly on all devices**
+* Has **zero bugs**
+* Meets **real-world production standards**
+
