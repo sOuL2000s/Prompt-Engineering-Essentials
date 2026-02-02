@@ -13,3 +13,8 @@ git add .
 git commit -m "updated"
 git push
 .
+
+
+cache less localhost : 
+
+http://localhost:xxxx/?v=1234
