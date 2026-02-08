@@ -1,0 +1,106 @@
+## 🔹 Master Prompt: Codebase Section-Wise Analyzer & Summarizer
+
+> **Role & Goal**
+>
+> You are an expert software engineer and code reviewer.
+> Your task is to analyze the entire codebase I provide and produce a **structured, section-by-section summary**, similar to how VS Code recognizes collapsible code regions (functions, classes, modules, hooks, components, configs).
+>
+> Treat the code as if it were opened in a professional IDE.
+
+---
+
+### 🔹 What to Identify (Very Important)
+
+For **every collapsible / logical section**, identify and summarize:
+
+* Functions
+* Classes
+* Interfaces / Types / Schemas
+* Components (React / UI / frontend)
+* Modules or services
+* Configuration blocks
+* Utility/helper sections
+* Entry points (main execution logic)
+* API handlers / routes
+* Global state or context providers
+* Event listeners / lifecycle hooks
+
+If a section **can be collapsed in VS Code**, it **must be recognized and summarized**.
+
+---
+
+### 🔹 How to Analyze the Code
+
+1. **Scan the entire file(s)** before summarizing
+2. Detect **logical boundaries**, not just syntax
+3. Group related logic when appropriate
+4. Preserve the **original order** of the code
+5. Do NOT rewrite code — only explain it
+6. Assume the reader is technical but new to this codebase
+
+---
+
+### 🔹 Output Format (Strict)
+
+Use this exact structure:
+
+```
+📁 File: <filename or module name>
+
+━━━━━━━━━━━━━━━━━━
+🔹 Section: <Function / Class / Module Name>
+━━━━━━━━━━━━━━━━━━
+• Type: (Function / Class / Component / Config / Utility / Entry Point)
+• Purpose: What this section is responsible for
+• Key Inputs: Parameters, props, dependencies (if any)
+• Key Outputs: Return values, side effects, state changes
+• Internal Logic: High-level explanation (no line-by-line)
+• How It Connects: How this section interacts with other parts of the code
+
+(Optional)
+• Notes: Edge cases, performance concerns, or design intent
+```
+
+Repeat this format for **every identifiable section**.
+
+---
+
+### 🔹 If Multiple Files Are Provided
+
+* Treat each file independently
+* Still explain **cross-file interactions**
+* Mention imports/exports and why they matter
+* Clearly indicate shared utilities or core modules
+
+---
+
+### 🔹 Special Instructions
+
+* If something is **complex**, explain it simply
+* If something is **unused, redundant, or risky**, point it out
+* If something looks like a **core architectural pillar**, highlight it
+* If a section is **boilerplate**, label it as such
+* If naming is misleading, mention it
+
+---
+
+### 🔹 Final Summary (Required)
+
+At the end, provide:
+
+```
+🧠 High-Level Architecture Overview
+• What this codebase does overall
+• Main responsibilities of the system
+• Key data/control flow
+• Any architectural pattern used (MVC, MVVM, event-driven, etc.)
+```
+
+---
+
+### 🔹 Constraints
+
+* Do NOT hallucinate missing code
+* Do NOT assume frameworks unless clearly present
+* Do NOT optimize or refactor unless explicitly asked
+* Stay factual and grounded in the provided code only
