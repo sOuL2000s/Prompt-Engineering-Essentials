@@ -1,0 +1,157 @@
+Perfect 👍 — since your main use case is **code**, the prompt needs to:
+
+* Preserve architecture
+* Preserve function logic
+* Preserve variable relationships
+* Preserve edge cases
+* Avoid “generic summaries”
+* Stay structured for later recombination
+
+Below is a **high-precision code summarization prompt** you can reuse for each chunk.
+
+---
+
+# 🔥 MASTER PROMPT — Code Chunk Summarizer (For Large Codebases)
+
+You will send this along with each chunk.
+
+---
+
+## 📌 Prompt
+
+```
+You are analyzing a PART of a large codebase.
+
+Your task is NOT to give a generic summary.
+Your task is to extract structured technical memory that will later be combined with other parts.
+
+Follow these rules strictly:
+
+1. Do NOT omit important logic.
+2. Do NOT rewrite code.
+3. Do NOT explain basics.
+4. Preserve architecture and relationships.
+5. Be concise but information-dense.
+
+Return output in this exact structure:
+
+--------------------------------------------------
+
+## 1. File Purpose
+- What this file/module is responsible for in the system.
+
+## 2. Key Components
+List all:
+- Classes
+- Major functions
+- Important constants
+- Configurations
+- Global state
+
+For each function/method include:
+- Name:
+- Inputs (parameters):
+- Output:
+- Side effects:
+- Core logic in 3–6 bullet steps:
+
+## 3. Data Flow
+- What data enters this file?
+- What data leaves?
+- External dependencies (APIs, DB, files, env vars, services)?
+
+## 4. Internal Relationships
+- Which functions call which?
+- Shared state?
+- Middleware/hooks/events?
+
+## 5. Important Logic & Edge Cases
+- Conditional branches that matter
+- Error handling
+- Security considerations
+- Performance considerations
+
+## 6. Unknowns / Assumptions
+- Anything unclear from this chunk alone
+
+## 7. Compression Block (VERY IMPORTANT)
+Provide a highly compressed technical memory block that preserves architecture in minimal tokens.
+This will be used later for reconstruction.
+
+Format:
+MODULE_MEMORY:
+- bullet points only
+- dense
+- no explanations
+- no filler words
+
+--------------------------------------------------
+
+Do NOT summarize loosely.
+Extract reconstructable technical memory.
+```
+
+---
+
+# 🧠 How To Use It Properly
+
+For each chunk:
+
+1. Paste the prompt
+2. Paste code chunk below it
+3. Collect the output
+4. Save only the **Compression Block** separately
+5. Repeat for next chunk
+
+---
+
+# 🔥 Final Step — After All Chunks
+
+Then send:
+
+```
+You are given compressed memory blocks from multiple parts of a codebase.
+
+Your task:
+1. Reconstruct the full system architecture.
+2. Identify component interactions.
+3. Detect design patterns used.
+4. Detect potential architectural weaknesses.
+5. Suggest improvements if needed.
+
+Here are the memory blocks:
+[paste all MODULE_MEMORY sections]
+```
+
+This lets you feed massive projects safely.
+
+---
+
+# 🚀 Why This Works
+
+Normal summaries lose:
+
+* Function logic
+* Data flow
+* Edge cases
+* Architecture
+
+This format preserves:
+
+* Structure
+* Reconstructability
+* Technical density
+* Cross-module linking potential
+
+---
+
+Since you're building AI tooling and coding assistants, this structure is actually how you'd build a lightweight RAG summarizer pipeline.
+
+If you want, I can also give you:
+
+* ⚡ Ultra-compressed version (for tiny context models)
+* 🧠 Deep architectural analyzer version
+* 🛠 Debug-focused summarizer version
+* 🔐 Security audit summarizer version
+
+Tell me which direction you want.
