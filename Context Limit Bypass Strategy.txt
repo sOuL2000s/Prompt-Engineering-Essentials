@@ -1,157 +1,141 @@
-Perfect 👍 — since your main use case is **code**, the prompt needs to:
+# 🔥 MASTER PROMPT — Multi-File Codebase Chunk Summarizer
 
-* Preserve architecture
-* Preserve function logic
-* Preserve variable relationships
-* Preserve edge cases
-* Avoid “generic summaries”
-* Stay structured for later recombination
-
-Below is a **high-precision code summarization prompt** you can reuse for each chunk.
-
----
-
-# 🔥 MASTER PROMPT — Code Chunk Summarizer (For Large Codebases)
-
-You will send this along with each chunk.
+Use this for every chunk you send.
 
 ---
 
 ## 📌 Prompt
 
 ```
-You are analyzing a PART of a large codebase.
+You are analyzing PART of a large multi-file codebase.
 
-Your task is NOT to give a generic summary.
-Your task is to extract structured technical memory that will later be combined with other parts.
+The input contains MULTIPLE FILES in this format:
 
-Follow these rules strictly:
+--- START FILE: filename ---
+<code>
+--- END FILE: filename ---
 
-1. Do NOT omit important logic.
-2. Do NOT rewrite code.
-3. Do NOT explain basics.
-4. Preserve architecture and relationships.
-5. Be concise but information-dense.
+Your task is NOT to summarize casually.
+Your task is to extract structured technical memory that allows full architectural reconstruction later.
+
+CRITICAL RULES:
+1. Respect file boundaries.
+2. Do NOT merge files conceptually.
+3. Preserve cross-file dependencies.
+4. Be concise but technically dense.
+5. Avoid generic explanations.
+6. Do NOT rewrite code.
+7. Assume more parts are coming later.
 
 Return output in this exact structure:
 
+==================================================
+
+# CHUNK SUMMARY
+
+## A. Files Detected
+List all filenames found in this chunk.
+
 --------------------------------------------------
 
-## 1. File Purpose
-- What this file/module is responsible for in the system.
+For EACH file, provide:
+
+# FILE: <filename>
+
+## 1. File Responsibility
+- Purpose in overall system
 
 ## 2. Key Components
-List all:
+List:
 - Classes
 - Major functions
-- Important constants
+- Constants
 - Configurations
-- Global state
+- Exported elements
 
 For each function/method include:
 - Name:
-- Inputs (parameters):
+- Inputs:
 - Output:
 - Side effects:
-- Core logic in 3–6 bullet steps:
+- Core logic (3–6 dense bullet steps):
 
-## 3. Data Flow
-- What data enters this file?
-- What data leaves?
-- External dependencies (APIs, DB, files, env vars, services)?
+## 3. Dependencies
+- Imports from other local files
+- External libraries
+- APIs / DB / Services used
 
-## 4. Internal Relationships
-- Which functions call which?
-- Shared state?
-- Middleware/hooks/events?
+## 4. Data Flow
+- What enters this file?
+- What leaves this file?
+- Shared/global state?
 
-## 5. Important Logic & Edge Cases
-- Conditional branches that matter
+## 5. Important Logic
+- Critical conditionals
 - Error handling
-- Security considerations
+- Security concerns
 - Performance considerations
-
-## 6. Unknowns / Assumptions
-- Anything unclear from this chunk alone
-
-## 7. Compression Block (VERY IMPORTANT)
-Provide a highly compressed technical memory block that preserves architecture in minimal tokens.
-This will be used later for reconstruction.
-
-Format:
-MODULE_MEMORY:
-- bullet points only
-- dense
-- no explanations
-- no filler words
 
 --------------------------------------------------
 
-Do NOT summarize loosely.
-Extract reconstructable technical memory.
+## B. Cross-File Relationships (Within This Chunk Only)
+- Which files interact?
+- Function calls across files?
+- Shared models/types?
+
+--------------------------------------------------
+
+## C. Global Memory Extraction (VERY IMPORTANT)
+
+Provide a compressed architectural memory block for THIS CHUNK.
+
+Format:
+
+CHUNK_MEMORY:
+- bullet points only
+- extremely dense
+- preserve:
+    - module roles
+    - service layers
+    - DB models
+    - API routes
+    - shared utilities
+    - event flows
+- no filler
+- no explanations
+
+This will later be merged with memory from other chunks.
+
+==================================================
+
+Do NOT provide loose summaries.
+Extract reconstructable system memory.
 ```
 
----
+--------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# 🧠 How To Use It Properly
+# 🔥 Final Reconstruction Prompt (After All Parts)
 
-For each chunk:
-
-1. Paste the prompt
-2. Paste code chunk below it
-3. Collect the output
-4. Save only the **Compression Block** separately
-5. Repeat for next chunk
-
----
-
-# 🔥 Final Step — After All Chunks
-
-Then send:
+After processing all chunks:
 
 ```
-You are given compressed memory blocks from multiple parts of a codebase.
+You are given multiple CHUNK_MEMORY blocks from different parts of a codebase.
 
-Your task:
+Your tasks:
+
 1. Reconstruct the full system architecture.
-2. Identify component interactions.
-3. Detect design patterns used.
-4. Detect potential architectural weaknesses.
-5. Suggest improvements if needed.
+2. Identify:
+   - Backend layers
+   - Frontend layers
+   - Services
+   - Controllers
+   - Models
+   - Utilities
+3. Map cross-file dependencies.
+4. Detect architectural patterns.
+5. Detect tight coupling or circular dependencies.
+6. Suggest improvements.
 
 Here are the memory blocks:
-[paste all MODULE_MEMORY sections]
+[paste all CHUNK_MEMORY sections]
 ```
-
-This lets you feed massive projects safely.
-
----
-
-# 🚀 Why This Works
-
-Normal summaries lose:
-
-* Function logic
-* Data flow
-* Edge cases
-* Architecture
-
-This format preserves:
-
-* Structure
-* Reconstructability
-* Technical density
-* Cross-module linking potential
-
----
-
-Since you're building AI tooling and coding assistants, this structure is actually how you'd build a lightweight RAG summarizer pipeline.
-
-If you want, I can also give you:
-
-* ⚡ Ultra-compressed version (for tiny context models)
-* 🧠 Deep architectural analyzer version
-* 🛠 Debug-focused summarizer version
-* 🔐 Security audit summarizer version
-
-Tell me which direction you want.
