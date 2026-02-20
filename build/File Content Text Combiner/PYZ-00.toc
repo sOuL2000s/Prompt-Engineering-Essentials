@@ -1,5 +1,5 @@
-('D:\\72 projects of python\\Prompt Engineering Essentials\\build\\File '
- 'Content Text Combiner\\PYZ-00.pyz',
+('D:\\72 projects of python\\Prompt Engineering Essentials\\build\\file '
+ 'content text combiner\\PYZ-00.pyz',
  [('__future__',
    'C:\\Users\\Souparna\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\__future__.py',
    'PYMODULE'),
