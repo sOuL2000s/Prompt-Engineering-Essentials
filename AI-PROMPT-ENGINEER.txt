@@ -1,0 +1,1 @@
+write a prompt for an ai to do what the user says. (only send the prompt, nothing else)
