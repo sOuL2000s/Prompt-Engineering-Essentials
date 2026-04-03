@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 import os
 import sys
 
@@ -146,12 +146,44 @@ def combine_files_to_single_file_gui(root_dir, output_full_path,
 
 # --- GUI Application ---
 class FileCombinerApp:
+    THEMES = {
+        "light": {
+            "bg": "#f9f9f9",
+            "fg": "#202020",
+            "frame_bg": "#ffffff",
+            "entry_bg": "#ffffff",
+            "button_bg": "#0078d4",
+            "button_fg": "#ffffff",
+            "log_bg": "#ffffff",
+            "log_fg": "#333333",
+            "accent": "#0078d4",
+            "border": "#dddddd"
+        },
+        "dark": {
+            "bg": "#1e1e1e",
+            "fg": "#e0e0e0",
+            "frame_bg": "#2d2d2d",
+            "entry_bg": "#3d3d3d",
+            "button_bg": "#0078d4",
+            "button_fg": "#ffffff",
+            "log_bg": "#121212",
+            "log_fg": "#cccccc",
+            "accent": "#47a1ff",
+            "border": "#444444"
+        }
+    }
+
     def __init__(self, master):
         self.master = master
         master.title("Project File Combiner")
         
-        master.geometry("1100x850") 
+        self.current_theme = "light"
+        self.colors = self.THEMES[self.current_theme]
+
+        # Modern sizing
+        master.geometry("1000x950") 
         master.resizable(True, True)
+        master.configure(bg=self.colors["bg"])
 
         # Variables
         self.root_dir_var = tk.StringVar(value=os.getcwd()) # Default to current dir
@@ -162,7 +194,7 @@ class FileCombinerApp:
             value="node_modules, .git, .vscode, .idea, dist, build, venv, __pycache__, .DS_Store"
         )
         self.excluded_files_var = tk.StringVar(
-            value="package-lock.json, yarn.lock, bun.lockb, .env, .DS_Store, Thumbs.db, pyproject.toml"
+            value="package-lock.json, yarn.lock, bun.lockb, .DS_Store, Thumbs.db, pyproject.toml, combined_project_files.txt"
         )
 
         # Included items
@@ -174,119 +206,144 @@ class FileCombinerApp:
 
         self.create_widgets()
 
+    def setup_styles(self):
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+        self.apply_theme_styles()
+
+    def apply_theme_styles(self):
+        c = self.colors
+        self.style.configure("TFrame", background=c["bg"])
+        self.style.configure("TLabelframe", background=c["bg"], foreground=c["fg"])
+        self.style.configure("TLabelframe.Label", background=c["bg"], foreground=c["accent"], font=('Segoe UI Semibold', 10))
+        self.style.configure("TLabel", background=c["bg"], foreground=c["fg"], font=('Segoe UI', 9))
+        self.style.configure("TEntry", fieldbackground=c["entry_bg"], foreground=c["fg"], insertcolor=c["fg"])
+        self.style.configure('Browse.TButton', font=('Segoe UI', 9), padding=5)
+        self.style.map('Browse.TButton',
+            background=[('active', c["accent"]), ('!disabled', c["frame_bg"])],
+            foreground=[('active', '#ffffff'), ('!disabled', c["fg"])]
+        )
+        self.style.configure("TSeparator", background=c["border"])
+
+    def toggle_theme(self):
+        self.current_theme = "dark" if self.current_theme == "light" else "light"
+        self.colors = self.THEMES[self.current_theme]
+        self.master.configure(bg=self.colors["bg"])
+        self.apply_theme_styles()
+        self.refresh_ui_colors()
+
+    def refresh_ui_colors(self):
+        c = self.colors
+        self.main_container.configure(bg=c["bg"])
+        self.header_frame.configure(bg=c["bg"])
+        self.footer_frame.configure(bg=c["bg"])
+        self.search_results_listbox.configure(bg=c["log_bg"], fg=c["log_fg"], selectbackground=c["accent"])
+        self.result_container.configure(highlightbackground=c["border"], bg=c["log_bg"])
+        self.status_text.configure(bg=c["log_bg"], fg=c["log_fg"])
+        self.combine_button.configure(bg=c["button_bg"], fg=c["button_fg"])
+        self.theme_btn.configure(text="🌙 Dark Mode" if self.current_theme == "light" else "☀️ Light Mode", 
+                                 bg=c["frame_bg"], fg=c["fg"])
+
     def create_widgets(self):
-        # Frame for inputs
-        input_frame = tk.Frame(self.master, padx=10, pady=10)
-        input_frame.pack(fill=tk.X)
-
-        # Configure grid column weights so the Entry fields expand
-        # input_frame.grid_columnconfigure(1, weight=1) # Already had this for excluding files
-        input_frame.grid_columnconfigure(1, weight=1) # Ensure the entry columns get space
-        input_frame.grid_columnconfigure(3, weight=0) # Make sure the helpful label doesn't steal too much space
-
-
-        row_num = 0
-
-        # Project Root Directory
-        tk.Label(input_frame, text="1. Project Root Directory:").grid(row=row_num, column=0, sticky=tk.W, pady=2)
-        tk.Entry(input_frame, textvariable=self.root_dir_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Browse...", command=self.browse_root_dir).grid(row=row_num, column=2, pady=2, padx=5)
-        row_num += 1
-
-        # Output File Location
-        tk.Label(input_frame, text="2. Output File Path:").grid(row=row_num, column=0, sticky=tk.W, pady=2)
-        tk.Entry(input_frame, textvariable=self.output_full_path_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Browse...", command=self.browse_output_file).grid(row=row_num, column=2, pady=2, padx=5)
-        row_num += 1
-
-        # Separator for clarity
-        tk.Frame(input_frame, height=2, bd=1, relief=tk.SUNKEN).grid(row=row_num, columnspan=4, sticky=tk.EW, pady=10)
-        row_num += 1
+        self.setup_styles()
+        c = self.colors
         
-        tk.Label(input_frame, text="3. Define what to INCLUDE (optional - filters the search space):",
-                 font=('Arial', 10, 'bold')).grid(row=row_num, column=0, columnspan=4, sticky=tk.W, pady=(5,0))
-        row_num += 1
+        # Main Layout
+        self.main_container = tk.Frame(self.master, bg=c["bg"], padx=25, pady=10)
+        self.main_container.pack(fill=tk.BOTH, expand=True)
 
-        # Included Directories (NEW)
-        tk.Label(input_frame, text="Include Directories (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
-        tk.Entry(input_frame, textvariable=self.included_dirs_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Add Dir...", command=self.browse_included_dirs).grid(row=row_num, column=2, pady=2, padx=5)
-        tk.Label(input_frame, text="e.g., src, docs", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
-        row_num += 1
-
-        # Included Files (NEW)
-        tk.Label(input_frame, text="Include Files (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
-        tk.Entry(input_frame, textvariable=self.included_files_var, width=70).grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Add File...", command=self.browse_included_files).grid(row=row_num, column=2, pady=2, padx=5)
-        tk.Label(input_frame, text="e.g., main.py, README.md", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
-        row_num += 1
-
-        # Separator for clarity
-        tk.Frame(input_frame, height=2, bd=1, relief=tk.SUNKEN).grid(row=row_num, columnspan=4, sticky=tk.EW, pady=10)
-        row_num += 1
-
-        tk.Label(input_frame, text="4. Define what to EXCLUDE (applied after inclusions):",
-                 font=('Arial', 10, 'bold')).grid(row=row_num, column=0, columnspan=4, sticky=tk.W, pady=(5,0))
-        row_num += 1
-
-
-        # Excluded Directories
-        tk.Label(input_frame, text="Exclude Directories (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
-        entry_excluded_dirs = tk.Entry(input_frame, textvariable=self.excluded_dirs_var, width=70)
-        entry_excluded_dirs.grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Add Dir...", command=self.browse_excluded_dirs).grid(row=row_num, column=2, pady=2, padx=5)
-        tk.Label(input_frame, text="e.g., node_modules, .git", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
-        row_num += 1
-
-
-        # Excluded Files
-        tk.Label(input_frame, text="Exclude Files (comma-separated basenames):").grid(row=row_num, column=0, sticky=tk.W, pady=2)
-        entry_excluded_files = tk.Entry(input_frame, textvariable=self.excluded_files_var, width=70)
-        entry_excluded_files.grid(row=row_num, column=1, pady=2, padx=5, sticky=tk.EW)
-        tk.Button(input_frame, text="Add File...", command=self.browse_excluded_files).grid(row=row_num, column=2, pady=2, padx=5)
-        tk.Label(input_frame, text="e.g., package-lock.json, .env", fg="gray").grid(row=row_num, column=3, sticky=tk.W, padx=5)
-        row_num += 1
-
-
-        # Combine Button
-        self.combine_button = tk.Button(self.master, text="Combine Files", command=self.start_combination, 
-                                        font=('Arial', 12, 'bold'), bg='lightblue', fg='black')
-        self.combine_button.pack(pady=15)
-
-        # --- Search Section (NEW) ---
-        search_frame = tk.LabelFrame(self.master, text="5. Global Content Search (VS Code style)", padx=10, pady=10)
-        search_frame.pack(fill=tk.X, padx=10, pady=5)
-
-        tk.Label(search_frame, text="Search Keyword:").grid(row=0, column=0, sticky=tk.W)
-        self.search_entry = tk.Entry(search_frame, textvariable=self.search_query_var, width=50)
-        self.search_entry.grid(row=0, column=1, padx=5, sticky=tk.EW)
+        # Header
+        self.header_frame = tk.Frame(self.main_container, bg=c["bg"])
+        self.header_frame.pack(fill=tk.X, pady=(0, 10))
         
-        search_btn = tk.Button(search_frame, text="Search Files", command=self.perform_search)
-        search_btn.grid(row=0, column=2, padx=5)
+        title_lbl = tk.Label(self.header_frame, text="Project File Combiner", 
+                            font=('Segoe UI Semibold', 16), bg=c["bg"], fg=c["accent"])
+        title_lbl.pack(side=tk.LEFT)
+        
+        self.theme_btn = tk.Button(self.header_frame, text="🌙 Dark Mode" if self.current_theme == "light" else "☀️ Light Mode",
+                                  command=self.toggle_theme, relief=tk.FLAT, cursor="hand2",
+                                  bg=c["frame_bg"], fg=c["fg"], font=('Segoe UI', 9))
+        self.theme_btn.pack(side=tk.RIGHT)
 
-        # Results listbox
-        tk.Label(search_frame, text="Search Results (Select to include):").grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=(10,0))
+        # --- Section 1: Configuration ---
+        config_frame = ttk.LabelFrame(self.main_container, text=" Configuration ", padding=(15, 10))
+        config_frame.pack(fill=tk.X, pady=(0, 10))
+        config_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(config_frame, text="Project Root:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(config_frame, textvariable=self.root_dir_var).grid(row=0, column=1, pady=5, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(config_frame, text="Browse", style='Browse.TButton', command=self.browse_root_dir, width=12).grid(row=0, column=2, pady=5)
+
+        ttk.Label(config_frame, text="Output Path:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(config_frame, textvariable=self.output_full_path_var).grid(row=1, column=1, pady=5, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(config_frame, text="Browse", style='Browse.TButton', command=self.browse_output_file, width=12).grid(row=1, column=2, pady=5)
+
+        # --- Section 2: Filters ---
+        filters_frame = ttk.LabelFrame(self.main_container, text=" Inclusion & Exclusion Filters ", padding=(15, 10))
+        filters_frame.pack(fill=tk.X, pady=10)
+        filters_frame.columnconfigure(1, weight=1)
+
+        # Inclusions
+        ttk.Label(filters_frame, text="Include Dirs:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Entry(filters_frame, textvariable=self.included_dirs_var).grid(row=0, column=1, pady=2, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(filters_frame, text="+ Directory", style='Browse.TButton', command=self.browse_included_dirs, width=12).grid(row=0, column=2, pady=2)
+
+        ttk.Label(filters_frame, text="Include Files:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Entry(filters_frame, textvariable=self.included_files_var).grid(row=1, column=1, pady=2, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(filters_frame, text="+ File", style='Browse.TButton', command=self.browse_included_files, width=12).grid(row=1, column=2, pady=2)
+
+        ttk.Separator(filters_frame, orient='horizontal').grid(row=2, column=0, columnspan=3, sticky='ew', pady=12)
+
+        # Exclusions
+        ttk.Label(filters_frame, text="Exclude Dirs:").grid(row=3, column=0, sticky=tk.W, pady=2)
+        ttk.Entry(filters_frame, textvariable=self.excluded_dirs_var).grid(row=3, column=1, pady=2, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(filters_frame, text="+ Directory", style='Browse.TButton', command=self.browse_excluded_dirs, width=12).grid(row=3, column=2, pady=2)
+
+        ttk.Label(filters_frame, text="Exclude Files:").grid(row=4, column=0, sticky=tk.W, pady=2)
+        ttk.Entry(filters_frame, textvariable=self.excluded_files_var).grid(row=4, column=1, pady=2, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(filters_frame, text="+ File", style='Browse.TButton', command=self.browse_excluded_files, width=12).grid(row=4, column=2, pady=2)
+
+        # --- Section 3: Search ---
+        search_frame = ttk.LabelFrame(self.main_container, text=" Content-Based File Search ", padding=(15, 10))
+        search_frame.pack(fill=tk.X, pady=10)
+        search_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(search_frame, text="Search Query:").grid(row=0, column=0, sticky=tk.W)
+        self.search_entry = ttk.Entry(search_frame, textvariable=self.search_query_var)
+        self.search_entry.grid(row=0, column=1, padx=(10, 5), sticky=tk.EW)
+        ttk.Button(search_frame, text="Run Search", style='Browse.TButton', command=self.perform_search, width=12).grid(row=0, column=2)
+
+        self.result_container = tk.Frame(search_frame, bg=c["log_bg"], bd=1, highlightthickness=1, highlightbackground=c["border"])
+        self.result_container.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW, pady=(10, 5))
         
-        result_container = tk.Frame(search_frame)
-        result_container.grid(row=2, column=0, columnspan=3, sticky=tk.NSEW, pady=5)
-        
-        self.search_results_listbox = tk.Listbox(result_container, selectmode=tk.MULTIPLE, height=6)
+        self.search_results_listbox = tk.Listbox(self.result_container, selectmode=tk.MULTIPLE, height=5, 
+                                                font=('Consolas', 9), bd=0, highlightthickness=0,
+                                                bg=c["log_bg"], fg=c["log_fg"], selectbackground=c["accent"])
         self.search_results_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        scrollbar = tk.Scrollbar(result_container, orient=tk.VERTICAL, command=self.search_results_listbox.yview)
+        scrollbar = ttk.Scrollbar(self.result_container, orient=tk.VERTICAL, command=self.search_results_listbox.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.search_results_listbox.config(yscrollcommand=scrollbar.set)
 
-        add_search_btn = tk.Button(search_frame, text="Add Selected to Inclusion List", command=self.add_search_results_to_included)
-        add_search_btn.grid(row=3, column=0, columnspan=3, pady=5)
+        ttk.Button(search_frame, text="Add Selected to Inclusion List", style='Browse.TButton', 
+                   command=self.add_search_results_to_included).grid(row=2, column=0, columnspan=3, pady=(5,0))
 
-        search_frame.grid_columnconfigure(1, weight=1)
+        # --- Section 4: Action & Log ---
+        self.footer_frame = tk.Frame(self.main_container, bg=c["bg"])
+        self.footer_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
 
-        # Status Output
-        tk.Label(self.master, text="Status/Log:").pack(anchor=tk.W, padx=10, pady=(0,5))
-        self.status_text = scrolledtext.ScrolledText(self.master, wrap=tk.WORD, height=10)
-        self.status_text.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
-        self.status_text.config(state=tk.DISABLED) # Make it read-only
+        self.combine_button = tk.Button(self.footer_frame, text="COMBINE ALL SELECTED FILES", command=self.start_combination, 
+                                        font=('Segoe UI Semibold', 11), bg=c["button_bg"], fg=c["button_fg"], 
+                                        activebackground=c["accent"], activeforeground='white',
+                                        relief=tk.FLAT, cursor="hand2", padx=30, pady=10)
+        self.combine_button.pack(pady=(0, 15))
+
+        ttk.Label(self.footer_frame, text="Execution Log", font=('Segoe UI Semibold', 10)).pack(anchor=tk.W, pady=(5,2))
+        self.status_text = scrolledtext.ScrolledText(self.footer_frame, wrap=tk.WORD, height=10, 
+                                                     font=('Consolas', 9), bg=c["log_bg"], fg=c["log_fg"],
+                                                     relief=tk.FLAT, bd=0)
+        self.status_text.pack(fill=tk.BOTH, expand=True)
+        self.status_text.config(state=tk.DISABLED)
 
     def update_status_message(self, message):
         """Appends a message to the status log and scrolls to the end."""
@@ -483,7 +540,7 @@ class FileCombinerApp:
             return
         
         # Disable button during processing
-        self.combine_button.config(state=tk.DISABLED, text="Processing...")
+        self.combine_button.config(state=tk.DISABLED, text="PROCESSING...", bg=self.colors["border"])
         
         # Run the core logic
         try:
@@ -506,10 +563,19 @@ class FileCombinerApp:
             self.update_status_message(f"An unexpected error occurred: {e}")
         finally:
             # Re-enable button
-            self.combine_button.config(state=tk.NORMAL, text="Combine Files")
+            self.combine_button.config(state=tk.NORMAL, text="COMBINE ALL SELECTED FILES", bg=self.colors["button_bg"])
 
 
 if __name__ == "__main__":
+    # Enable High DPI awareness on Windows
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+
     root = tk.Tk()
+    # Set a minimum window size to ensure UI remains usable
+    root.minsize(800, 600)
     app = FileCombinerApp(root)
     root.mainloop()

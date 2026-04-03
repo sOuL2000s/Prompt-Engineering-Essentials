@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='file content text combiner',
+    name='File Content Text Combiner',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
