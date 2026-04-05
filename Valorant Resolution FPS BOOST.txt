@@ -125,3 +125,98 @@ If you want, I can:
 * Suggest **pro player settings**
 * Help you optimize FPS for your exact PC specs
 * Or explain why stretched feels “faster” even when it isn’t 👀
+
+---------------------------------------------
+
+Got it—you want **maximum FPS with zero black bars**, so we’ll stick strictly to **16:9 resolutions** (your monitor’s native aspect ratio). That guarantees full-screen with no stretching issues in **Valorant**.
+
+---
+
+# ✅ All Common 16:9 Resolutions (No Black Bars)
+
+Here’s a complete, practical list from highest → lowest:
+
+### 🟢 High Quality (Less FPS gain)
+
+* **1920×1080** (Native for most monitors)
+* **1600×900**
+* **1366×768**
+
+---
+
+### 🟡 Balanced (Good FPS boost + playable clarity)
+
+* **1280×720** ⭐ (Best balance)
+* **1152×648** (less common but valid 16:9)
+* **1024×576**
+
+---
+
+### 🔴 Maximum FPS (Lowest quality)
+
+* **960×540**
+* **854×480**
+* **640×360** (extreme low, mostly for testing)
+
+---
+
+# 🎯 Best Choices for FPS Boost
+
+If your goal is *pure FPS*, here’s what actually makes sense:
+
+## 🥇 Sweet Spot:
+
+👉 **1280×720**
+
+* Big FPS boost
+* Still playable
+* No blur mess
+
+## 🥈 More FPS:
+
+👉 **1024×576**
+
+* Noticeable FPS jump
+* Slight blur
+
+## 🥉 Extreme FPS:
+
+👉 **960×540**
+
+* Maximum performance
+* Very blurry, but usable for low-end PCs
+
+---
+
+# ⚡ Pro Tips (Important)
+
+* Always use **Fullscreen mode**, not windowed
+* Turn OFF:
+
+  * V-Sync
+  * Anti-aliasing (or keep low)
+* Lower:
+
+  * Material, Detail, UI quality
+
+---
+
+# 🚫 Avoid This Mistake
+
+Don’t use:
+
+* 4:3 (like 1280×960) → causes black bars or fake stretch
+* Weird custom res unless GPU scaling is perfect
+
+Stick to **pure 16:9 = guaranteed full screen**
+
+---
+
+# 🧠 Quick Rule
+
+👉 Lower resolution = more FPS
+👉 But too low = harder to aim
+
+---
+
+If you tell me your **GPU + CPU + RAM**, I can suggest the *exact resolution + settings combo* that will squeeze out the absolute maximum FPS from your system.
