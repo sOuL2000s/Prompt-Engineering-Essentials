@@ -1,0 +1,127 @@
+Black bars and stretched resolutions in **Valorant** are a bit tricky because the game is designed to **lock aspect ratio (16:9)** by default. So unlike older FPS games, true “stretched” gameplay doesn’t behave the same way—but you *can* still tweak things.
+
+---
+
+# 🔧 How to Fix Black Bars (Enable Stretched Look)
+
+## ✅ Step 1: Change GPU Scaling Settings
+
+### If you have NVIDIA:
+
+1. Right-click desktop → **NVIDIA Control Panel**
+2. Go to **Display → Adjust desktop size and position**
+3. Set:
+
+   * Scaling mode → **Full-screen**
+   * Perform scaling on → **GPU**
+   * Check → *Override scaling mode*
+4. Apply
+
+---
+
+### If you have AMD:
+
+1. Open **AMD Radeon Software**
+2. Go to **Settings → Display**
+3. Turn ON:
+
+   * **GPU Scaling**
+4. Scaling Mode → **Full Panel**
+
+---
+
+## ✅ Step 2: Use a Custom Resolution
+
+Now create and use a stretched resolution:
+
+### Popular stretched resolutions:
+
+* **1280×960 (4:3)** → Most popular (balanced stretch)
+* **1024×768 (4:3)** → More stretch (bigger player models visually)
+* **1440×1080 (4:3)** → Higher quality stretched
+* **1280×1024 (5:4)** → Slightly different feel
+
+---
+
+## ⚠️ Important Reality Check (Very Important)
+
+In **Valorant**:
+
+* Stretched resolution **DOES NOT actually stretch player models**
+* It only stretches **UI and HUD**
+* Enemy hitboxes remain the same (no advantage like CS:GO)
+
+So:
+👉 You won’t get “wider enemies”
+👉 Only visual feel + FPS boost
+
+---
+
+# 🎯 Best Resolutions to Use (My Recommendation)
+
+## 🥇 Best Overall:
+
+* **1280×960**
+
+  * Smooth
+  * Slightly stretched feel
+  * Good FPS boost
+  * Widely used
+
+## 🥈 Best for Performance:
+
+* **1024×768**
+
+  * Maximum FPS
+  * More blur/stretch
+
+## 🥉 Best Quality Stretch:
+
+* **1440×1080**
+
+  * Looks cleaner
+  * Still gives stretched feel
+
+---
+
+# 💡 Bonus: If Black Bars Still Appear
+
+* Make sure your monitor scaling is not forcing aspect ratio
+* Disable “Maintain Aspect Ratio” in GPU settings
+* Restart the game after applying changes
+* Run Valorant in **Fullscreen (not Windowed/Borderless)**
+
+---
+
+# ⚡ Pro Insight (Important)
+
+Many pro players in **Valorant** actually prefer:
+
+* **1920×1080 (native)**
+
+Why?
+
+* Cleaner visuals
+* Better clarity for long-range fights
+* No real advantage from stretch anyway
+
+---
+
+# 🧠 My Honest Advice
+
+If you're playing competitively:
+👉 Stick to **native 1920×1080**
+
+If you want:
+
+* More FPS
+* Old-school feel
+  👉 Try **1280×960**
+
+---
+
+If you want, I can:
+
+* Suggest **pro player settings**
+* Help you optimize FPS for your exact PC specs
+* Or explain why stretched feels “faster” even when it isn’t 👀
