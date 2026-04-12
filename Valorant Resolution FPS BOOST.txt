@@ -1,3 +1,9 @@
+best for streached screen : 
+
+1280x882
+1568x1080
+1600x1080
+
 Black bars and stretched resolutions in **Valorant** are a bit tricky because the game is designed to **lock aspect ratio (16:9)** by default. So unlike older FPS games, true “stretched” gameplay doesn’t behave the same way—but you *can* still tweak things.
 
 ---
