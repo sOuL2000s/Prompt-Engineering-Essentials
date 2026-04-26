@@ -1,0 +1,35 @@
+# --- Python Specific ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# --- Project Specific Session Data ---
+# This file contains your local absolute paths (e.g., D:\\72 projects...) 
+# which will not work on other machines and may leak your folder structure.
+last_session.json
+
+# --- PyInstaller / Executable Builds ---
+# These are generated folders when you compile your .py to .exe
+build/
+dist/
+# If you don't want to track the auto-generated spec files (you have many):
+*.spec
+
+# --- IDEs and Editors ---
+.vscode/
+.idea/
+.project
+.pydevproject
+.settings/
+
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+
+# --- Combined/Output Files ---
+# If you use your 'combined.py' tool, ignore its output so you don't 
+# accidentally commit a massive text file containing your whole codebase.
+combined_project_files.txt

@@ -3,26 +3,100 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 import os
 import sys
 import threading
+import json
 from pathlib import Path
+try:
+    import pathspec
+except ImportError:
+    pathspec = None
 
 # --- Core Logic (now with optional include functionality) ---
+def generate_directory_tree(root_dir, excluded_dirs, excluded_files, 
+                            included_dirs, included_files, gitignore_spec=None):
+    """
+    Generates a visual text-based directory tree of the project, respecting 
+    exclusions, inclusions, and gitignore rules.
+    """
+    use_include_mode = bool(included_dirs or included_files)
+    excluded_dirs_set = set(excluded_dirs)
+    excluded_files_set = set(f.strip() for f in excluded_files)
+    included_dirs_set = set(included_dirs)
+    included_files_set = set(f.strip() for f in included_files)
+
+    tree_lines = [f"{os.path.basename(root_dir)}/"]
+    
+    def _walk_tree(current_dir, prefix=""):
+        try:
+            # Sorting items keeps the tree output deterministic
+            items = sorted(os.listdir(current_dir))
+        except PermissionError:
+            return
+
+        valid_items = []
+        for item in items:
+            item_path = os.path.join(current_dir, item)
+            rel_path = os.path.relpath(item_path, root_dir)
+            abs_path = os.path.abspath(item_path)
+
+            if os.path.islink(item_path):
+                continue
+
+            if os.path.isdir(item_path):
+                # Directory filtering
+                if gitignore_spec and gitignore_spec.match_file(os.path.normpath(rel_path)):
+                    continue
+                if item in excluded_dirs_set:
+                    continue
+                
+                # Include Mode logic for Directory Traversal
+                if use_include_mode and included_dirs_set:
+                    segments = rel_path.split(os.sep)
+                    if not any(seg in included_dirs_set for seg in segments):
+                        continue
+                
+                valid_items.append((item, True))
+            else:
+                # File filtering
+                if item in excluded_files_set or abs_path in excluded_files_set:
+                    continue
+                if gitignore_spec and gitignore_spec.match_file(os.path.normpath(rel_path)):
+                    continue
+                
+                # Include Mode logic for Files
+                if use_include_mode:
+                    if included_files_set:
+                        if not (item in included_files_set or abs_path in included_files_set):
+                            continue
+                    elif included_dirs_set:
+                        segments = rel_path.split(os.sep)
+                        if not any(seg in included_dirs_set for seg in segments[:-1]):
+                            continue
+                
+                valid_items.append((item, False))
+
+        for i, (name, is_dir) in enumerate(valid_items):
+            is_last = (i == len(valid_items) - 1)
+            connector = "└── " if is_last else "├── "
+            tree_lines.append(f"{prefix}{connector}{name}{'/' if is_dir else ''}")
+            
+            if is_dir:
+                new_prefix = prefix + ("    " if is_last else "│   ")
+                _walk_tree(os.path.join(current_dir, name), new_prefix)
+
+    _walk_tree(root_dir)
+    return "\n".join(tree_lines)
+
 def combine_files_to_single_file_gui(root_dir, output_full_path, 
                                      excluded_dirs_list, excluded_files_list,
-                                     included_dirs_list, included_files_list, # New parameters
-                                     status_callback):
+                                     included_dirs_list, included_files_list,
+                                     status_callback, gitignore_spec=None,
+                                     manual_selection_map=None):
     """
-    Combines the content of all files in a directory into a single file,
-    optionally including only specified directories/files, or excluding specified
-    directories and files, and provides status updates via a callback.
+    Combines the content of all files in a directory into a single file.
 
     Args:
-        root_dir (str): The root directory of the project.
-        output_full_path (str): The full path including filename for the output file.
-        excluded_dirs_list (list): A list of directory names to exclude (ignored if include lists are used).
-        excluded_files_list (list): A list of filenames to exclude (ignored if include lists are used).
-        included_dirs_list (list): A list of directory names to explicitly include.
-        included_files_list (list): A list of filenames to explicitly include.
-        status_callback (callable): A function to call with status messages.
+        ...
+        manual_selection_map (dict): Optional mapping of absolute file path to boolean (True = include).
     """
     combined_content = []
 
@@ -42,6 +116,20 @@ def combine_files_to_single_file_gui(root_dir, output_full_path,
     
     status_callback(f"Excluding directories: {', '.join(excluded_dirs_list)}")
     status_callback(f"Excluding files: {', '.join(excluded_files_list)}")
+
+    # 0. Generate Directory Tree Header
+    status_callback("Generating project directory tree header...")
+    tree_header = generate_directory_tree(
+        root_dir, excluded_dirs_list, excluded_files_list, 
+        included_dirs_list, included_files_list, gitignore_spec
+    )
+    combined_content.append("================================================================\n")
+    combined_content.append("PROJECT STRUCTURE (TREE VIEW)\n")
+    combined_content.append("================================================================\n\n")
+    combined_content.append(tree_header)
+    combined_content.append("\n\n================================================================\n")
+    combined_content.append("FILE CONTENTS\n")
+    combined_content.append("================================================================\n")
 
     # Basic validation
     if not os.path.isdir(root_dir):
@@ -68,6 +156,10 @@ def combine_files_to_single_file_gui(root_dir, output_full_path,
     try:
         for dirpath, dirnames, filenames in os.walk(root_dir):
             relative_dirpath = os.path.relpath(dirpath, root_dir)
+
+            # --- 0. Apply Gitignore Patterns (Directories) ---
+            if gitignore_spec:
+                dirnames[:] = [d for d in dirnames if not gitignore_spec.match_file(os.path.normpath(os.path.join(relative_dirpath, d)))]
 
             # --- 1. Apply Exclusions for Directories (Always) ---
             dirnames[:] = [d for d in dirnames if d not in excluded_dirs_set]
@@ -107,18 +199,25 @@ def combine_files_to_single_file_gui(root_dir, output_full_path,
                 if filename in excluded_files_set or abs_file_path in excluded_files_set:
                     continue
 
+                # Gitignore check for files
+                if gitignore_spec and gitignore_spec.match_file(os.path.normpath(relative_file_path)):
+                    continue
+
                 if use_include_mode:
                     # If specific files are included, only take those
                     if included_files_set:
                         if filename in included_files_set or abs_file_path in included_files_set:
-                            files_to_process.append(filename)
-                        # We removed the log here to prevent UI lag
+                            # Apply manual checklist override if present
+                            if manual_selection_map is None or manual_selection_map.get(abs_file_path, True):
+                                files_to_process.append(filename)
                     # If no specific files but included_dirs are defined, take all files in an included/relevant dir
                     elif included_dirs_set:
-                        files_to_process.append(filename)
+                        if manual_selection_map is None or manual_selection_map.get(abs_file_path, True):
+                            files_to_process.append(filename)
                 else: 
                     # Not in include mode, all non-excluded files are included
-                    files_to_process.append(filename)
+                    if manual_selection_map is None or manual_selection_map.get(abs_file_path, True):
+                        files_to_process.append(filename)
 
             # --- Process the filtered files ---
             for filename in files_to_process:
@@ -147,6 +246,8 @@ def combine_files_to_single_file_gui(root_dir, output_full_path,
         return False
 
 # --- GUI Application ---
+CONFIG_FILE = "last_session.json"
+
 class FileCombinerApp:
     THEMES = {
         "light": {
@@ -183,6 +284,9 @@ class FileCombinerApp:
         
         self.current_theme = "dark" # Start with dark mode as it looks more modern
         self.colors = self.THEMES[self.current_theme]
+        
+        # File preview state
+        self.preview_files = {} # abs_path: bool (True = checked)
 
         # Sizing and Window Setup
         master.geometry("1000x850")
@@ -210,6 +314,19 @@ class FileCombinerApp:
 
         self.setup_styles()
         self.create_widgets()
+
+        # Load persisted settings from previous session
+        self.load_config()
+
+        # Setup auto-save on window close
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # Check for pathspec dependency
+        if not pathspec:
+            self.update_status_message("⚠️  Note: 'pathspec' library is missing. .gitignore files will be ignored.")
+            self.update_status_message("👉 To enable .gitignore support, run: pip install pathspec")
+        else:
+            self.update_status_message("✅ 'pathspec' detected. .gitignore support is active.")
 
     def setup_styles(self):
         self.style = ttk.Style()
@@ -251,6 +368,12 @@ class FileCombinerApp:
             foreground=[("selected", "#ffffff"), ("active", c["fg"])]
         )
 
+        # Treeview Styling
+        self.style.configure("Treeview", background=c["log_bg"], foreground=c["log_fg"], 
+                             fieldbackground=c["log_bg"], borderwidth=0, font=('Segoe UI', 9))
+        self.style.configure("Treeview.Heading", background=c["frame_bg"], foreground=c["fg"], font=('Segoe UI Semibold', 9))
+        self.style.map("Treeview", background=[('selected', c["accent"])], foreground=[('selected', '#ffffff')])
+
         # Specific styling for inner frames of notebook
         self.style.configure("Tab.TFrame", background=c["frame_bg"])
 
@@ -263,6 +386,8 @@ class FileCombinerApp:
 
     def refresh_ui_colors(self):
         c = self.colors
+        # Update Treeview headers manual background if needed (some systems don't update headings automatically)
+        self.tree_container.configure(highlightbackground=c["border"], bg=c["log_bg"])
         # Update Standard Frames and Canvas
         self.main_container.configure(bg=c["bg"])
         self.header_frame.configure(bg=c["bg"])
@@ -289,6 +414,8 @@ class FileCombinerApp:
         # Update Buttons
         self.combine_button.configure(bg=c["button_bg"], fg=c["button_fg"], 
                                         activebackground=c["accent"])
+        self.copy_button.configure(bg=c["frame_bg"], fg=c["fg"], 
+                                     activebackground=c["border"], highlightbackground=c["border"])
         self.theme_btn.configure(text="🌙 Dark Mode" if self.current_theme == "light" else "☀️ Light Mode", 
                                  bg=c["frame_bg"], fg=c["fg"], activebackground=c["border"])
         
@@ -397,6 +524,7 @@ class FileCombinerApp:
         ttk.Label(search_tab, text="Keyword:", style="Card.TLabel").grid(row=0, column=0, sticky=tk.W)
         self.search_entry = ttk.Entry(search_tab, textvariable=self.search_query_var)
         self.search_entry.grid(row=0, column=1, padx=15, sticky=tk.EW)
+        self.search_entry.bind('<Return>', lambda e: self.perform_search())
         ttk.Button(search_tab, text="Search Files", style='Action.TButton', command=self.perform_search).grid(row=0, column=2)
 
         self.result_container = tk.Frame(search_tab, bg=c["log_bg"], bd=1, highlightthickness=1, highlightbackground=c["border"])
@@ -414,6 +542,39 @@ class FileCombinerApp:
         ttk.Button(search_tab, text="Add Selection to Inclusion List", style='Browse.TButton', 
                    command=self.add_search_results_to_included).grid(row=2, column=0, columnspan=3, sticky=tk.E)
 
+        # Tab 3: Interactive Preview (The Checklist)
+        preview_tab = ttk.Frame(self.notebook, padding=20, style="Tab.TFrame")
+        self.notebook.add(preview_tab, text=" File Checklist (Scan) ")
+        preview_tab.columnconfigure(0, weight=1)
+        preview_tab.rowconfigure(1, weight=1)
+
+        preview_header_frame = tk.Frame(preview_tab, bg=c["frame_bg"])
+        preview_header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+
+        ttk.Label(preview_header_frame, text="Select specific files to include in the merge:", 
+                  style="Card.TLabel").pack(side=tk.LEFT)
+        
+        self.scan_button = ttk.Button(preview_header_frame, text="Scan Project", 
+                                     style='Action.TButton', command=self.perform_scan)
+        self.scan_button.pack(side=tk.RIGHT)
+
+        # Treeview for checklist
+        self.tree_container = tk.Frame(preview_tab, bg=c["log_bg"], bd=1, highlightthickness=1, highlightbackground=c["border"])
+        self.tree_container.grid(row=1, column=0, sticky="nsew")
+        
+        self.tree = ttk.Treeview(self.tree_container, columns=("Include", "Path"), show="headings", style="Treeview")
+        self.tree.heading("Include", text="[X]")
+        self.tree.heading("Path", text="Relative File Path")
+        self.tree.column("Include", width=50, stretch=False, anchor="center")
+        self.tree.column("Path", width=600, stretch=True)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        tree_scroll = ttk.Scrollbar(self.tree_container, orient=tk.VERTICAL, command=self.tree.yview)
+        tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.configure(yscrollcommand=tree_scroll.set)
+        
+        self.tree.bind("<ButtonRelease-1>", self.on_tree_click)
+
         # 3. Footer Section (Fixed at bottom)
         self.footer_outer = tk.Frame(self.master, bg=c["bg"], padx=30, pady=20)
         self.footer_outer.grid(row=2, column=0, sticky="ew")
@@ -422,7 +583,14 @@ class FileCombinerApp:
                                         font=('Segoe UI Bold', 12), bg=c["button_bg"], fg=c["button_fg"], 
                                         activebackground=c["accent"], activeforeground='white',
                                         relief=tk.FLAT, cursor="hand2", pady=15)
-        self.combine_button.pack(fill=tk.X, pady=(0, 20))
+        self.combine_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.copy_button = tk.Button(self.footer_outer, text="📋 COPY MERGED RESULT TO CLIPBOARD", 
+                                       command=self.copy_to_clipboard, 
+                                       font=('Segoe UI Semibold', 10), bg=c["frame_bg"], fg=c["fg"], 
+                                       activebackground=c["border"], relief=tk.FLAT, cursor="hand2", 
+                                       pady=10, state=tk.DISABLED)
+        self.copy_button.pack(fill=tk.X, pady=(0, 20))
 
         self.log_label_frame = tk.Frame(self.footer_outer, bg=c["bg"])
         self.log_label_frame.pack(fill=tk.X, pady=(0, 5))
@@ -438,6 +606,53 @@ class FileCombinerApp:
 
         # Mousewheel scrolling for canvas
         self.master.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def load_config(self):
+        """Loads configuration from a JSON file."""
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.root_dir_var.set(config.get("root_dir", os.getcwd()))
+                    self.output_full_path_var.set(config.get("output_path", os.path.join(os.getcwd(), "combined_project_files.txt")))
+                    self.excluded_dirs_var.set(config.get("excluded_dirs", "node_modules, .git, .vscode, .idea, dist, build, venv, __pycache__, .DS_Store"))
+                    self.excluded_files_var.set(config.get("excluded_files", "package-lock.json, yarn.lock, bun.lockb, .DS_Store, Thumbs.db, pyproject.toml, combined_project_files.txt"))
+                    self.included_dirs_var.set(config.get("included_dirs", ""))
+                    self.included_files_var.set(config.get("included_files", ""))
+                    
+                    # Apply saved theme
+                    saved_theme = config.get("theme", "dark")
+                    if saved_theme != self.current_theme:
+                        self.current_theme = saved_theme
+                        self.colors = self.THEMES[self.current_theme]
+                        self.apply_theme_styles()
+                        self.refresh_ui_colors()
+                        
+                self.update_status_message(f"✅ Last session configuration restored.")
+            except Exception as e:
+                self.update_status_message(f"⚠️ Failed to load session config: {e}")
+
+    def save_config(self):
+        """Saves current configuration to a JSON file."""
+        config = {
+            "root_dir": self.root_dir_var.get(),
+            "output_path": self.output_full_path_var.get(),
+            "excluded_dirs": self.excluded_dirs_var.get(),
+            "excluded_files": self.excluded_files_var.get(),
+            "included_dirs": self.included_dirs_var.get(),
+            "included_files": self.included_files_var.get(),
+            "theme": self.current_theme
+        }
+        try:
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=4)
+        except Exception as e:
+            print(f"Error saving config: {e}")
+
+    def on_closing(self):
+        """Called when the window is closed."""
+        self.save_config()
+        self.master.destroy()
 
     def update_status_message(self, message):
         """Schedules a log update on the main thread."""
@@ -483,7 +698,14 @@ class FileCombinerApp:
             # Automatically update output path to the same directory
             new_output_path = os.path.join(directory, "combined_project_files.txt")
             self.output_full_path_var.set(new_output_path)
-            self.update_status_message(f"Source and destination updated to: {directory}")
+            
+            msg = f"Source updated to: {directory}"
+            if os.path.exists(os.path.join(directory, '.gitignore')):
+                if pathspec:
+                    msg += " (Found .gitignore - filtering active)"
+                else:
+                    msg += " (Found .gitignore - filtering DISABLED. Install pathspec to enable.)"
+            self.update_status_message(msg)
 
     def browse_output_file(self):
         """Opens a file save dialog for specifying the output file."""
@@ -557,6 +779,25 @@ class FileCombinerApp:
             self._add_to_comma_separated_list(self.included_files_var, abs_paths)
             self.update_status_message(f"Added {len(abs_paths)} files to INCLUSION list.")
 
+    def copy_to_clipboard(self):
+        """Reads the output file and copies its content to the system clipboard."""
+        output_path = self.output_full_path_var.get()
+        if not os.path.exists(output_path):
+            messagebox.showerror("Error", "Output file not found. Please merge files first.")
+            return
+        
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            self.master.clipboard_clear()
+            self.master.clipboard_append(content)
+            self.update_status_message("✅ Project content copied to clipboard!")
+            messagebox.showinfo("Clipboard", "Success! Merged project content has been copied to your clipboard.")
+        except Exception as e:
+            self.update_status_message(f"❌ Failed to copy to clipboard: {e}")
+            messagebox.showerror("Error", f"Failed to copy to clipboard: {e}")
+
     def _is_binary(self, file_path):
         """Checks if a file is likely binary by looking for null bytes in first 1024 bytes."""
         try:
@@ -567,41 +808,61 @@ class FileCombinerApp:
             return True
 
     def perform_search(self):
-        """Searches through file contents in root_dir for the keyword using Pathlib."""
+        """Highly optimized search using os.walk and directory pruning."""
         query = self.search_query_var.get().strip().lower()
-        root_path = Path(self.root_dir_var.get())
+        root_dir = self.root_dir_var.get()
         
         if not query:
             messagebox.showwarning("Search", "Please enter a search keyword.")
             return
-        if not root_path.is_dir():
+        if not os.path.isdir(root_dir):
             messagebox.showerror("Error", "Invalid root directory for search.")
             return
 
-        self.update_status_message(f"Searching for '{query}' in {root_path}...")
+        self.update_status_message(f"Searching for '{query}'... (Fast Scan Mode)")
         self.search_results_listbox.delete(0, tk.END)
         
+        # Prepare exclusions as sets for O(1) lookups
         excluded_dirs = set(d.strip() for d in self.excluded_dirs_var.get().split(',') if d.strip())
+        excluded_files = set(f.strip() for f in self.excluded_files_var.get().split(',') if f.strip())
+        gitignore_spec = self._load_gitignore_spec(root_dir)
 
         def search_worker():
             matches = []
             try:
-                for file_path in root_path.rglob('*'):
-                    if not file_path.is_file():
-                        continue
+                for dirpath, dirnames, filenames in os.walk(root_dir):
+                    relative_dirpath = os.path.relpath(dirpath, root_dir)
+
+                    # Gitignore pruning
+                    if gitignore_spec:
+                        dirnames[:] = [d for d in dirnames if not gitignore_spec.match_file(os.path.normpath(os.path.join(relative_dirpath, d)))]
+
+                    # CRITICAL OPTIMIZATION: Prune directories in-place.
+                    # This prevents os.walk from even entering excluded folders like node_modules.
+                    dirnames[:] = [d for d in dirnames if d not in excluded_dirs]
                     
-                    # Check if any parent dir is excluded
-                    if any(part in excluded_dirs for part in file_path.parts):
-                        continue
+                    for filename in filenames:
+                        file_path = os.path.join(dirpath, filename)
+                        relative_file_path = os.path.relpath(file_path, root_dir)
+                        abs_path = os.path.abspath(file_path)
 
-                    if self._is_binary(file_path):
-                        continue
+                        if filename in excluded_files or abs_path in excluded_files:
+                            continue
+                        
+                        if gitignore_spec and gitignore_spec.match_file(os.path.normpath(relative_file_path)):
+                            continue
+                        
+                        # Skip known binary files to speed up
+                        if self._is_binary(file_path):
+                            continue
 
-                    try:
-                        if query in file_path.read_text(encoding='utf-8', errors='ignore').lower():
-                            matches.append(str(file_path.absolute()))
-                    except Exception:
-                        continue
+                        try:
+                            # Read with errors='ignore' for speed and to avoid crashes on non-utf8 text
+                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                if query in f.read().lower():
+                                    matches.append(abs_path)
+                        except Exception:
+                            continue
                 
                 def update_ui():
                     if matches:
@@ -629,8 +890,115 @@ class FileCombinerApp:
         self._add_to_comma_separated_list(self.included_files_var, selected_paths)
         self.update_status_message(f"Added {len(selected_paths)} selected files to INCLUSION list.")
 
+    def perform_scan(self):
+        """Scans project based on current rules and populates the checklist."""
+        root_dir = self.root_dir_var.get().strip()
+        if not os.path.isdir(root_dir):
+            messagebox.showerror("Error", "Invalid root directory.")
+            return
+
+        self.update_status_message("Scanning project for checklist...")
+        self.scan_button.config(state=tk.DISABLED, text="Scanning...")
+        
+        # Clear current tree
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        self.preview_files = {}
+
+        def scan_worker():
+            excluded_dirs = set(d.strip() for d in self.excluded_dirs_var.get().split(',') if d.strip())
+            excluded_files = set(f.strip() for f in self.excluded_files_var.get().split(',') if f.strip())
+            included_dirs = set(d.strip() for d in self.included_dirs_var.get().split(',') if d.strip())
+            included_files = set(f.strip() for f in self.included_files_var.get().split(',') if f.strip())
+            use_include_mode = bool(included_dirs or included_files)
+            
+            gitignore_spec = self._load_gitignore_spec(root_dir)
+            found_items = []
+
+            for dirpath, dirnames, filenames in os.walk(root_dir):
+                rel_dir = os.path.relpath(dirpath, root_dir)
+                
+                # Pruning
+                if gitignore_spec:
+                    dirnames[:] = [d for d in dirnames if not gitignore_spec.match_file(os.path.normpath(os.path.join(rel_dir, d)))]
+                dirnames[:] = [d for d in dirnames if d not in excluded_dirs]
+                
+                if use_include_mode and included_dirs:
+                    if dirpath != root_dir:
+                        segments = rel_dir.split(os.sep)
+                        if not any(seg in included_dirs for seg in segments):
+                            dirnames[:] = []
+                            continue
+
+                for f in filenames:
+                    abs_path = os.path.abspath(os.path.join(dirpath, f))
+                    rel_path = os.path.relpath(abs_path, root_dir)
+                    
+                    if f in excluded_files or abs_path in excluded_files: continue
+                    if gitignore_spec and gitignore_spec.match_file(os.path.normpath(rel_path)): continue
+                    if self._is_binary(abs_path): continue
+
+                    include = True
+                    if use_include_mode:
+                        include = False
+                        if included_files and (f in included_files or abs_path in included_files):
+                            include = True
+                        elif included_dirs:
+                            include = True # Parent dir check already passed if we got here
+                    
+                    if include:
+                        found_items.append((rel_path, abs_path))
+
+            def update_ui():
+                for rel, abs_p in found_items:
+                    self.preview_files[abs_p] = True
+                    self.tree.insert("", tk.END, values=("☑", rel), tags=(abs_p,))
+                
+                self.scan_button.config(state=tk.NORMAL, text="Scan Project")
+                self.update_status_message(f"Scan complete. Found {len(found_items)} files.")
+            
+            self.master.after(0, update_ui)
+
+        threading.Thread(target=scan_worker, daemon=True).start()
+
+    def on_tree_click(self, event):
+        """Handles checkbox toggling in the Treeview."""
+        item_id = self.tree.identify_row(event.y)
+        column = self.tree.identify_column(event.x)
+        
+        if item_id and column == "#1": # Clicking the 'Include' column
+            tags = self.tree.item(item_id, "tags")
+            if not tags: return
+            abs_path = tags[0]
+            
+            # Toggle state
+            is_checked = not self.preview_files.get(abs_path, True)
+            self.preview_files[abs_path] = is_checked
+            
+            # Update UI
+            new_val = "☑" if is_checked else "☐"
+            current_values = list(self.tree.item(item_id, "values"))
+            current_values[0] = new_val
+            self.tree.item(item_id, values=tuple(current_values))
+
+    def _load_gitignore_spec(self, root_dir):
+        """Attempts to load .gitignore patterns from root directory."""
+        if not pathspec:
+            return None
+        
+        gitignore_path = os.path.join(root_dir, '.gitignore')
+        if os.path.exists(gitignore_path):
+            try:
+                with open(gitignore_path, 'r', encoding='utf-8') as f:
+                    spec = pathspec.PathSpec.from_lines('gitwildmatch', f)
+                return spec
+            except Exception as e:
+                self.update_status_message(f"Warning: Failed to parse .gitignore: {e}")
+        return None
+
     def start_combination(self):
         """Triggers the file combination process in a background thread."""
+        self.save_config() # Auto-save current settings before starting
         root_dir = self.root_dir_var.get().strip()
         output_full_path = self.output_full_path_var.get().strip()
 
@@ -650,6 +1018,7 @@ class FileCombinerApp:
 
         # Visual Feedback
         self.combine_button.config(state=tk.DISABLED, text="⌛ PROCESSING FILES...", bg=self.colors["border"])
+        self.copy_button.config(state=tk.DISABLED)
         
         # Run in background
         thread = threading.Thread(target=self._run_combination_logic)
@@ -666,7 +1035,14 @@ class FileCombinerApp:
         included_dirs = [d.strip() for d in self.included_dirs_var.get().split(',') if d.strip()]
         included_files = [f.strip() for f in self.included_files_var.get().split(',') if f.strip()]
 
+        gitignore_spec = self._load_gitignore_spec(root_dir)
+        if gitignore_spec:
+            self.update_status_message(">>> Applied .gitignore patterns for filtering.")
+
         try:
+            # Pass the manual selection map (from the Checklist tab) if it's been populated
+            manual_map = self.preview_files if self.preview_files else None
+            
             success = combine_files_to_single_file_gui(
                 root_dir, 
                 output_full_path, 
@@ -674,15 +1050,18 @@ class FileCombinerApp:
                 excluded_files, 
                 included_dirs, 
                 included_files,
-                self.update_status_message
+                self.update_status_message,
+                gitignore_spec=gitignore_spec,
+                manual_selection_map=manual_map
             )
 
             def finalize():
                 if success:
+                    self.copy_button.config(state=tk.NORMAL)
                     messagebox.showinfo("Success", f"Files combined successfully into:\n{output_full_path}")
                 else:
                     messagebox.showerror("Failed", "File combination failed. Check the log for details.")
-                self.combine_button.config(state=tk.NORMAL, text="COMBINE ALL SELECTED FILES", bg=self.colors["button_bg"])
+                self.combine_button.config(state=tk.NORMAL, text="START MERGING PROJECT FILES", bg=self.colors["button_bg"])
 
             self.master.after(0, finalize)
         except Exception as e:
