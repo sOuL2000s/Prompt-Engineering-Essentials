@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['combined.py'],
+    ['File Content Text Combiner.py'],
     pathex=[],
     binaries=[],
     datas=[],
