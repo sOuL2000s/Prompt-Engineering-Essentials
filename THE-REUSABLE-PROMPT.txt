@@ -1,0 +1,1 @@
+"i want to ........." - i have stated my intentions, now please design a prompt which i can use/send multiple times to the ai. so that in case the ai misses something in the first try then i shall be able to use it again for making sure all my intentions are satisfied.
