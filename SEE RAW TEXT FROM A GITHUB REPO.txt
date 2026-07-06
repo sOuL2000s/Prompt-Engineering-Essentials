@@ -1,0 +1,13 @@
+example url : 
+
+https://github.com/sOuL2000s/DeepPitch-Football_Tournament_Manager
+
+converted url : 
+
+https://uithub.com/sOuL2000s/DeepPitch-Football_Tournament_Manager
+
+###
+
+changing github.com to uithub.com
+
+###
