@@ -1,0 +1,72 @@
+name: Build and Release EXE
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'project_combiner.py'
+      - 'project_combiner.spec'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller pathspec
+    
+    - name: Build EXE
+      run: |
+        pyinstaller --noconsole --onefile --clean project_combiner.py
+    
+    - name: Get commit message for release name
+      id: commit
+      run: |
+        $msg = git log -1 --pretty=%B
+        # Extract first line of commit message as release name
+        $firstLine = $msg -split "`n" | Select-Object -First 1
+        echo "RELEASE_NAME=$firstLine" >> $env:GITHUB_OUTPUT
+        echo "FULL_MSG=$msg" >> $env:GITHUB_OUTPUT
+      shell: powershell
+    
+    - name: Create tag name
+      id: tag
+      run: |
+        $date = Get-Date -Format "yyyyMMdd-HHmm"
+        echo "TAG_NAME=release-$date" >> $env:GITHUB_OUTPUT
+      shell: powershell
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: ${{ steps.commit.outputs.RELEASE_NAME }}
+        tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+        body: |
+          ## ${{ steps.commit.outputs.RELEASE_NAME }}
+          
+          **Commit:** ${{ github.sha }}
+          **Date:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+          
+          **Full commit message:**
+          ${{ steps.commit.outputs.FULL_MSG }}
+          
+          ---
+          *Automatically built from commit ${{ github.sha }}*
+        files: |
+          dist/project_combiner.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
