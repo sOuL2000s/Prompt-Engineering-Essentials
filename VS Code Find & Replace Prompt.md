@@ -1,0 +1,3 @@
+## 🎯 VS Code Find & Replace Prompt (for future use)
+
+> **"When providing code output, format it so that I can use VS Code's global search (Ctrl+Shift+F) to find and replace specific sections. Preserve all indentations, line breaks, and code structure exactly as they are — do not minify or reformat. Wrap the output inside triple backticks with the language identifier (e.g., ```html). At the end, include a separate section with clear search/replace instructions for any variables, colors, or text strings I might want to customize, using the exact original strings from the code so I can copy-paste them directly into VS Code's find and replace fields."**
