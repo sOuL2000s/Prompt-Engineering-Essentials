@@ -14,6 +14,10 @@ echo.
 echo WARNING:
 echo This script permanently deletes:
 echo   - Downloads
+echo   - Documents
+echo   - Pictures
+echo   - Videos
+echo   - Music
 echo   - Browser profiles/data
 echo   - Temporary files
 echo   - Recent items
@@ -61,11 +65,11 @@ rem HELPER:
 rem Measure a directory before deletion and write result to report
 rem ============================================================
 
-echo [1/15] Closing Chrome...
+echo [1/19] Closing Chrome...
 taskkill /F /IM chrome.exe >nul 2>&1
 
 echo.
-echo [2/15] Cleaning TEMP...
+echo [2/19] Cleaning TEMP...
 
 call :MEASURE "%TEMP%" "User TEMP"
 del /f /s /q "%TEMP%\*" >nul 2>&1
@@ -73,7 +77,7 @@ for /d %%D in ("%TEMP%\*") do rd /s /q "%%D" >nul 2>&1
 call :AFTER "%TEMP%" "User TEMP"
 
 echo.
-echo [3/15] Cleaning Downloads...
+echo [3/19] Cleaning Downloads...
 
 call :MEASURE "%USERPROFILE%\Downloads" "Downloads"
 del /f /s /q "%USERPROFILE%\Downloads\*" >nul 2>&1
@@ -81,14 +85,46 @@ for /d %%D in ("%USERPROFILE%\Downloads\*") do rd /s /q "%%D" >nul 2>&1
 call :AFTER "%USERPROFILE%\Downloads" "Downloads"
 
 echo.
-echo [4/15] Deleting Chrome data...
+echo [4/19] Cleaning Documents...
+
+call :MEASURE "%USERPROFILE%\Documents" "Documents"
+del /f /s /q "%USERPROFILE%\Documents\*" >nul 2>&1
+for /d %%D in ("%USERPROFILE%\Documents\*") do rd /s /q "%%D" >nul 2>&1
+call :AFTER "%USERPROFILE%\Documents" "Documents"
+
+echo.
+echo [5/19] Cleaning Pictures...
+
+call :MEASURE "%USERPROFILE%\Pictures" "Pictures"
+del /f /s /q "%USERPROFILE%\Pictures\*" >nul 2>&1
+for /d %%D in ("%USERPROFILE%\Pictures\*") do rd /s /q "%%D" >nul 2>&1
+call :AFTER "%USERPROFILE%\Pictures" "Pictures"
+
+echo.
+echo [6/19] Cleaning Videos...
+
+call :MEASURE "%USERPROFILE%\Videos" "Videos"
+del /f /s /q "%USERPROFILE%\Videos\*" >nul 2>&1
+for /d %%D in ("%USERPROFILE%\Videos\*") do rd /s /q "%%D" >nul 2>&1
+call :AFTER "%USERPROFILE%\Videos" "Videos"
+
+echo.
+echo [7/19] Cleaning Music...
+
+call :MEASURE "%USERPROFILE%\Music" "Music"
+del /f /s /q "%USERPROFILE%\Music\*" >nul 2>&1
+for /d %%D in ("%USERPROFILE%\Music\*") do rd /s /q "%%D" >nul 2>&1
+call :AFTER "%USERPROFILE%\Music" "Music"
+
+echo.
+echo [8/19] Deleting Chrome data...
 
 call :MEASURE "%LOCALAPPDATA%\Google\Chrome\User Data" "Google Chrome User Data"
 rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data" >nul 2>&1
 call :AFTER "%LOCALAPPDATA%\Google\Chrome\User Data" "Google Chrome User Data"
 
 echo.
-echo [5/15] Emptying Recycle Bin...
+echo [9/19] Emptying Recycle Bin...
 
 powershell -NoProfile -Command ^
  "$bins=Get-PSDrive -PSProvider FileSystem; " ^
@@ -110,7 +146,7 @@ echo        ADDITIONAL SYSTEM CLEANUP
 echo ================================================
 echo.
 
-echo [6/15] Closing other browsers...
+echo [10/19] Closing other browsers...
 
 taskkill /F /IM msedge.exe >nul 2>&1
 taskkill /F /IM firefox.exe >nul 2>&1
@@ -126,28 +162,28 @@ taskkill /F /IM yandex.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
 
 echo.
-echo [7/15] Cleaning Microsoft Edge data...
+echo [11/19] Cleaning Microsoft Edge data...
 
 call :MEASURE "%LOCALAPPDATA%\Microsoft\Edge\User Data" "Microsoft Edge User Data"
 rd /s /q "%LOCALAPPDATA%\Microsoft\Edge\User Data" >nul 2>&1
 call :AFTER "%LOCALAPPDATA%\Microsoft\Edge\User Data" "Microsoft Edge User Data"
 
 echo.
-echo [8/15] Cleaning Firefox data...
+echo [12/19] Cleaning Firefox data...
 
 call :MEASURE "%APPDATA%\Mozilla\Firefox\Profiles" "Firefox Profiles"
 rd /s /q "%APPDATA%\Mozilla\Firefox\Profiles" >nul 2>&1
 call :AFTER "%APPDATA%\Mozilla\Firefox\Profiles" "Firefox Profiles"
 
 echo.
-echo [9/15] Cleaning Brave data...
+echo [13/19] Cleaning Brave data...
 
 call :MEASURE "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data" "Brave User Data"
 rd /s /q "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data" >nul 2>&1
 call :AFTER "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data" "Brave User Data"
 
 echo.
-echo [10/15] Cleaning Opera data...
+echo [14/19] Cleaning Opera data...
 
 call :MEASURE "%APPDATA%\Opera Software\Opera Stable" "Opera Stable"
 rd /s /q "%APPDATA%\Opera Software\Opera Stable" >nul 2>&1
@@ -158,7 +194,7 @@ rd /s /q "%APPDATA%\Opera Software\Opera GX Stable" >nul 2>&1
 call :AFTER "%APPDATA%\Opera Software\Opera GX Stable" "Opera GX Stable"
 
 echo.
-echo [11/15] Cleaning Vivaldi / Chromium / Yandex / Arc data...
+echo [15/19] Cleaning Vivaldi / Chromium / Yandex / Arc data...
 
 call :MEASURE "%LOCALAPPDATA%\Vivaldi\User Data" "Vivaldi User Data"
 rd /s /q "%LOCALAPPDATA%\Vivaldi\User Data" >nul 2>&1
@@ -177,7 +213,7 @@ rd /s /q "%LOCALAPPDATA%\Arc\User Data" >nul 2>&1
 call :AFTER "%LOCALAPPDATA%\Arc\User Data" "Arc User Data"
 
 echo.
-echo [12/15] Cleaning Windows user caches...
+echo [16/19] Cleaning Windows user caches...
 
 call :MEASURE "%LOCALAPPDATA%\Temp" "LocalAppData TEMP"
 del /f /s /q "%LOCALAPPDATA%\Temp\*" >nul 2>&1
@@ -208,7 +244,7 @@ for /d %%D in ("%LOCALAPPDATA%\Microsoft\Windows\WER\*") do rd /s /q "%%D" >nul 
 call :AFTER "%LOCALAPPDATA%\Microsoft\Windows\WER" "Windows Error Reporting"
 
 echo.
-echo [13/15] Cleaning Windows recent items...
+echo [17/19] Cleaning Windows recent items...
 
 call :MEASURE "%APPDATA%\Microsoft\Windows\Recent" "Windows Recent Items"
 del /f /q "%APPDATA%\Microsoft\Windows\Recent\*" >nul 2>&1
@@ -223,7 +259,7 @@ del /f /q "%APPDATA%\Microsoft\Windows\Recent\CustomDestinations\*" >nul 2>&1
 call :AFTER "%APPDATA%\Microsoft\Windows\Recent\CustomDestinations" "Custom Destinations"
 
 echo.
-echo [14/15] Uninstalling Lively Wallpaper if installed...
+echo [18/19] Uninstalling Lively Wallpaper if installed...
 
 where winget >nul 2>&1
 
@@ -236,7 +272,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "Remove-AppxPackage -ErrorAction SilentlyContinue"
 
 echo.
-echo [15/15] Restoring the default Windows wallpaper...
+echo [19/19] Restoring the default Windows wallpaper...
 
 set "DEFAULT_WALLPAPER=%WINDIR%\Web\Wallpaper\Windows\img0.jpg"
 
