@@ -1,0 +1,1 @@
+send me the full code of the modified files, do not strictly skip any lines or any content of those files. send me the full code so i can copy that and replace the current content of the file.

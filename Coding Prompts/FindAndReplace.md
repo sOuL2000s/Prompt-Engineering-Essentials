@@ -1,0 +1,1 @@
+send me the find and replace blocks with the exact indentation so i can copy and paste them on vscode's find and replace
