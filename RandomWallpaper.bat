@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-:: Advanced Wallpaper Randomizer
+:: Advanced Wallpaper Randomizer - Fixed Version
 :: Features: Tray support, History, Caching, Open Location, Modern UI
 powershell -ExecutionPolicy Bypass -Command ^
     "Add-Type -AssemblyName System.Windows.Forms;" ^
@@ -17,7 +17,7 @@ powershell -ExecutionPolicy Bypass -Command ^
     "" ^
     "$history = New-Object System.Collections.Generic.List[string];" ^
     "$historyIndex = -1;" ^
-    "$currentImg = '';" ^
+    "$script:currentImg = '';" ^
     "" ^
     "$form = New-Object System.Windows.Forms.Form;" ^
     "$form.Text = 'Wallpaper Ultra Randomizer';" ^
@@ -116,7 +116,9 @@ powershell -ExecutionPolicy Bypass -Command ^
     "$btnOpen.Size = New-Object System.Drawing.Size(120, 40);" ^
     "$btnOpen.FlatStyle = 'Flat';" ^
     "$btnOpen.Add_Click({" ^
-    "  if ($script:currentImg) { explorer.exe /select, \"$script:currentImg\" }" ^
+    "  if ($script:currentImg) {" ^
+    "    Start-Process explorer.exe -ArgumentList \"/select,`\"$($script:currentImg)`\"\"" ^
+    "  }" ^
     "});" ^
     "$form.Controls.Add($btnOpen);" ^
     "" ^
@@ -150,14 +152,14 @@ powershell -ExecutionPolicy Bypass -Command ^
     "$form.Controls.Add($chkAuto);" ^
     "" ^
     "$notifyIcon = New-Object System.Windows.Forms.NotifyIcon;" ^
-    "$notifyIcon.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Get-Process -Id $pid).Path);" ^
+    "try { $notifyIcon.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Get-Process -Id $pid).Path) } catch { $notifyIcon.Icon = [System.Drawing.SystemIcons]::Application }" ^
     "$notifyIcon.Text = 'Wallpaper Ultra';" ^
     "$notifyIcon.Visible = $true;" ^
-    "$notifyIcon.Add_DoubleClick({ $form.Show(); $form.WindowState = 'Normal' });" ^
+    "$notifyIcon.Add_DoubleClick({ $form.Show(); $form.WindowState = 'Normal'; $form.Activate() });" ^
     "" ^
     "$contextMenu = New-Object System.Windows.Forms.ContextMenuStrip;" ^
     "$menuShow = $contextMenu.Items.Add('Show');" ^
-    "$menuShow.Add_Click({ $form.Show(); $form.WindowState = 'Normal' });" ^
+    "$menuShow.Add_Click({ $form.Show(); $form.WindowState = 'Normal'; $form.Activate() });" ^
     "$menuNext = $contextMenu.Items.Add('Next Wallpaper');" ^
     "$menuNext.Add_Click({ $btnRandom.PerformClick() });" ^
     "$menuExit = $contextMenu.Items.Add('Exit');" ^
@@ -165,7 +167,10 @@ powershell -ExecutionPolicy Bypass -Command ^
     "$notifyIcon.ContextMenuStrip = $contextMenu;" ^
     "" ^
     "$form.Add_Resize({" ^
-    "  if ($form.WindowState -eq 'Minimized') { $form.Hide() }" ^
+    "  if ($form.WindowState -eq 'Minimized') {" ^
+    "    $form.Hide();" ^
+    "    $notifyIcon.ShowBalloonTip(2000, 'Wallpaper Ultra', 'Minimized to tray. Double-click icon to restore.', [System.Windows.Forms.ToolTipIcon]::Info);" ^
+    "  }" ^
     "});" ^
     "" ^
     "$form.Add_FormClosing({ $notifyIcon.Visible = $false });" ^
