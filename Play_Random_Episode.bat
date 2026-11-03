@@ -7,12 +7,9 @@ set "INPUT_DIR=%~1"
 powershell -sta -NoProfile -ExecutionPolicy Bypass -Command ^
     "$targetDir = $env:INPUT_DIR;" ^
     "if ([string]::IsNullOrWhitespace($targetDir) -or -not (Test-Path -LiteralPath $targetDir)) {" ^
-    "    Add-Type -AssemblyName System.Windows.Forms;" ^
-    "    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog;" ^
-    "    $dialog.Description = 'Select a folder containing video files';" ^
-    "    $dialog.ShowNewFolderButton = $false;" ^
-    "    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {" ^
-    "        $targetDir = $dialog.SelectedPath;" ^
+    "    Add-Type -Path '.\NativeFolderPicker.dll';" ^
+    "    $targetDir = [NativeFolderPicker.FolderPicker]::ShowDialog('Select a folder containing video files');" ^
+    "    if ([string]::IsNullOrWhitespace($targetDir)) { ^
     "    } else {" ^
     "        Write-Host 'No folder selected. Exiting...';" ^
     "        Start-Sleep -Seconds 2;" ^
